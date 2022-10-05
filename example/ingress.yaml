@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapp-ingress
+  namespace: webapp
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+    nginx.org/proxy-connect-timeout: "30s"
+    nginx.org/proxy-read-timeout: "20s"
+    nginx.org/client-max-body-size: "4m"
+    nginx.org/slow-start: "20s"
+    # nginx.org/main-snippets: |
+    #    load_module /usr/lib/modules/xyz_module.so
+    nginx.org/server-snippets: |
+      location /ping {
+        return 302 /pong;
+      }     
+spec:
+  # ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+              name: traffic-pod-autoscaler-svc
+              port:
+                number: 9000

@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+
+  traffic-pod-autoscaler:
+    build:
+      context: traffic-pod-autoscaler
+    ports:
+      - 8088:80

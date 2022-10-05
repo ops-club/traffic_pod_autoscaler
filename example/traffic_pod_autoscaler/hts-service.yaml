@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traffic-pod-autoscaler-svc
+  namespace: webapp
+  labels:
+    app.kubernetes.io/name: traffic-pod-autoscaler    
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: traffic-pod-autoscaler
