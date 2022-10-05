@@ -96,7 +96,7 @@ class KubernetesToolbox(object):
                 api_response = api_instance.patch_namespaced_deployment(
                     name=_deployment_name, namespace=_namespace, body=_body, async_req=False)
             except ApiException as e:
-                _logger.exception(e)
+                _logger.exception(f"{e =} {api_response=}")
 
     # Endpoints
     def check_endpoint_available(self, _namespace, _endpoint_name):
@@ -115,10 +115,12 @@ class KubernetesToolbox(object):
                             if subset.addresses is not None:
                                 for address in subset.addresses:
                                     if hasattr(address, 'ip'):
-                                        _logger.debug(f"IP address: {address.ip}")
+                                        _logger.debug(
+                                            f"IP address: {address.ip}")
                                         return True
                             else:
-                                _logger.debug("subset.addresses was set to None")
+                                _logger.debug(
+                                    "subset.addresses was set to None")
             else:
-                 _logger.debug("subsets not found")
+                _logger.debug("subsets not found")
             return False
