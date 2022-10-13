@@ -4,6 +4,6 @@ services:
 
   traffic-pod-autoscaler:
     build:
-      context: traffic-pod-autoscaler
+      context: traffic_pod_autoscaler
     ports:
       - 8088:80

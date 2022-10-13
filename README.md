@@ -50,7 +50,7 @@ spec:
       serviceAccountName: tpa
       containers:
       - name: tpa
-        image: 836835706379.dkr.ecr.eu-west-3.amazonaws.com/oc/traffic_pod_autoscaler:latest
+        image: opsclub/traffic_pod_autoscaler:latest
         imagePullPolicy: Always
         args:
         - --namespace=my-app
