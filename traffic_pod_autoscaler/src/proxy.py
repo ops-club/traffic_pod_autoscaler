@@ -143,17 +143,14 @@ class Proxy(object):
 
     def received_from(self, sock, timeout):
         _logger.debug("START")
-        BUFF_SIZE = 4096
-        fragments = []
-        data = ''
+        data = ""
         sock.settimeout(timeout)
         try:
             while True:
-                chunk = sock.recv(BUFF_SIZE)
-                if not chunk:
+                data = sock.recv(4096)
+                if not data:
                     break
-                fragments.append(chunk)
-            data = ''.join(fragments)
+                data = + data
         except:
             pass
         return data
