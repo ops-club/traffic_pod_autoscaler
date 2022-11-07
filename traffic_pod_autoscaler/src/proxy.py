@@ -145,7 +145,7 @@ class Proxy(object):
         _logger.debug("START")
         BUFF_SIZE = 4096
         fragments = []
-        data = b''
+        data = ''
         sock.settimeout(timeout)
         try:
             while True:
@@ -153,7 +153,7 @@ class Proxy(object):
                 if not chunk:
                     break
                 fragments.append(chunk)
-            data = b''.join(fragments)
+            data = ''.join(fragments)
         except:
             pass
         return data
