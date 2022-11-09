@@ -105,9 +105,9 @@ class Proxy(object):
                         # here if we want to update reponse
         except KeyboardInterrupt:
             _logger.info('Ending server')
-        except:
-            _logger.exception('Failed to listen on {}:{}'.format(
-                self.local_address, self.local_port))
+        except Exception as e:
+            _logger.debug(f"Failed to listen on {self.local_address}:{self.local_port}")
+            _logger.exception(f"Exception::{e}")
             sys.exit(0)
             # return 1
         # finally:
