@@ -21,3 +21,7 @@ k_namespace:
 .PHONY: k_ingress_logs
 k_ingress_logs:
 	kubectl  logs -n ingress-nginx -f ingress-nginx-controller-AAAAAAA
+
+.PHONY: k_ingress_forward
+k_ingress_forward:
+	kubectl port-forward --namespace=ingress-nginx service/ingress-nginx-controller --address 10.0.0.16 9000:80

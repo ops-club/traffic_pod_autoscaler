@@ -65,10 +65,11 @@ class Proxy(object):
     def tcp_server(self):
         _logger.debug("START")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.setblocking(0)
             sock.bind((self.local_address, int(self.local_port)))
-            sock.listen(3)
+            sock.listen(200)
             self.lsock.append(sock)
 
             _logger.info(
@@ -106,7 +107,8 @@ class Proxy(object):
         except KeyboardInterrupt:
             _logger.info('Ending server')
         except Exception as e:
-            _logger.debug(f"Failed to listen on {self.local_address}:{self.local_port}")
+            _logger.debug(
+                f"Failed to listen on {self.local_address}:{self.local_port}")
             _logger.exception(f"Exception::{e}")
             sys.exit(0)
             # return 1
@@ -121,11 +123,13 @@ class Proxy(object):
         while (counter < max_attempts):
             try:
                 remote_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                remote_sock.connect((self.remote_address, int(self.remote_port)))
+                remote_sock.connect(
+                    (self.remote_address, int(self.remote_port)))
                 return remote_sock
             except Exception as e:
                 counter += 1
-                _logger.debug(f"Sleep 1s due to connect failure ({counter}/{max_attempts}): {e}")
+                _logger.debug(
+                    f"Sleep 1s due to connect failure ({counter}/{max_attempts}): {e}")
                 time.sleep(1)
         _logger.exception(f"Max connect attempts reached ({max_attempts}).")
         return False
@@ -143,14 +147,18 @@ class Proxy(object):
 
     def received_from(self, sock, timeout):
         _logger.debug("START")
-        data = ""
+        BUFF_SIZE = 4096
+        fragments = []
+        data = b''
         sock.settimeout(timeout)
         try:
             while True:
-                data = sock.recv(4096)
-                if not data:
+                chunk = sock.recv(BUFF_SIZE)
+                if not chunk:
                     break
-                data = + data
+                fragments.append(chunk)
+            data = b''.join(fragments)
+
         except:
             pass
         return data
