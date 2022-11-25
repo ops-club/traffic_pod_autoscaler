@@ -79,14 +79,16 @@ class Scaler(object):
             self._namespace, self._deployment_name, self._last_call_at_annotation)
         _logger.debug(f"_last_call_annotation {_last_call_annotation}")
 
-        if _last_call_annotation is not None:
+        if _last_call_annotation is None:
+            self.update_last_call()
+        else:
             _last_call_UTC = _toolbox.get_date_utc_from_string(
                 _last_call_annotation)
 
-            _now_UTC = _toolbox.get_date_now_utc()
+        _now_UTC = _toolbox.get_date_now_utc()
 
-            if (_last_call_UTC + timedelta(seconds=self._expiration_time)) < _now_UTC:
-                return True
+        if (_last_call_UTC + timedelta(seconds=self._expiration_time)) < _now_UTC:
+            return True
 
         return False
 
