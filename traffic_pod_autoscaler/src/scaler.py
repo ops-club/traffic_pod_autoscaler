@@ -16,6 +16,7 @@ class Scaler(object):
     _endpoint_name = ""
     _expiration_time: int = 1800
     _replicas = None
+    _min_replicas: int = 1
     _max_retry: int = 30
     _waiting_time: int = 1000
     _factor = 1  # timeout series: 1s, 2s, 3s.... 10m
@@ -40,6 +41,9 @@ class Scaler(object):
 
         if "max_retry" in args:
             self._max_retry = args.max_retry
+
+        if "min_replicas" in args:
+            self._min_replicas = args.min_replicas
 
         _logger.info(f"Watching namespace: {self._namespace}")
         _logger.info(f"Watching deployment: {self._deployment_name}")
@@ -111,7 +115,7 @@ class Scaler(object):
 
         if self._replicas == 0 or self._replicas is None:
             self._k8s.update_replica_number(
-                self._namespace, self._deployment_name, 1)
+                self._namespace, self._deployment_name, self._min_replicas)
             # wait endpoint is available
             __waiting_time_ms = self._waiting_time
             for i in range(1, self._max_retry):

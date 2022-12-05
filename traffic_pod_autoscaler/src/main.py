@@ -22,6 +22,9 @@ def parse_args():
     parser.add_argument("--local-port", help="Proxy listen port",
                         type=int, default=80, required=False)
 
+    parser.add_argument("--min-replicas", help="Number of replicas to start",
+                        type=int, default=1, required=False)
+
     parser.add_argument("--target-address", help="target address to which requests should be proxied (typically the Service name)",
                         dest="remote_address", required=True)
     parser.add_argument("--target-port", help="Target listen port",
