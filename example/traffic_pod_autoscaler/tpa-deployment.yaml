@@ -16,16 +16,19 @@ spec:
       serviceAccountName: traffic-pod-autoscaler-sa
       containers:
       - name: traffic-pod-autoscaler
-        image: traffic_pod_autoscaler:latest
-        imagePullPolicy: Always
+        image: ops-club/traffic_pod_autoscaler:latest
+        imagePullPolicy: Never
         args:
         - --namespace=webapp
         - --local-port=9000
         - --deployment=frontend
+        - --replica-set=frontend
+        - --target-kind=replica_set
+        - --config-map=traffic-pod-autoscaler-cm
         - --endpoint=frontend-svc
         - --target-address=frontend-svc
         - --target-port=80
-        - --expiration-time=300
+        - --expiration-time=60
         - --check-interval=30
         - --log-level=DEBUG
         resources:

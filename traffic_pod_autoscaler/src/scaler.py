@@ -13,6 +13,10 @@ class Scaler(object):
 
     _namespace = ""
     _deployment_name = ""
+    _replica_set_name = ""
+    # _rollout_api = ""
+    _target_kind = ""
+    _config_map_name = ""
     _endpoint_name = ""
     _expiration_time: int = 1800
     _replicas = None
@@ -33,6 +37,18 @@ class Scaler(object):
         if "deployment" in args:
             self._deployment_name = args.deployment
 
+        if "replica_set" in args:
+            self._replica_set_name = args.replica_set
+
+        # if "rollout_api" in args:
+        #     self._rollout_api = args.rollout_api
+
+        if "target_kind" in args:
+            self._target_kind = args.target_kind
+
+        if "config_map" in args:
+            self._config_map_name = args.config_map
+
         if "endpoint" in args:
             self._endpoint_name = args.endpoint
 
@@ -47,6 +63,10 @@ class Scaler(object):
 
         _logger.info(f"Watching namespace: {self._namespace}")
         _logger.info(f"Watching deployment: {self._deployment_name}")
+        _logger.info(f"Watching config_map: {self._config_map_name}")
+        _logger.info(f"Watching replica_set: {self._replica_set_name}")
+        # _logger.info(f"Watching rollout_api: {self._rollout_api}")
+        _logger.info(f"Watching target_kind: {self._target_kind}")
         _logger.info(f"Watching endpoint: {self._endpoint_name}")
         _logger.info(
             f"Traffic expiration time: {self._expiration_time} (in seconds)")
@@ -56,11 +76,35 @@ class Scaler(object):
 
         self._k8s = KubernetesToolbox()
 
+    def get_target_kind(self):
+        if self._target_kind == "deployment":
+            return "deployment"
+        elif self._target_kind == "replica_set":
+            return "replica_set"
+
+    def get_replica_number(self):
+        _logger.debug("START")
+        if self.get_target_kind() == "deployment":
+            self._replicas = self._k8s.get_deployment_replica_number(
+                self._namespace, self._deployment_name)
+        else:
+            self._replicas = self._k8s.get_replica_set_replica_number(
+                self._namespace, self._replica_set_name)
+
+        return self._replicas
+
+    def update_replica_number(self, _replica=0):
+        if self.get_target_kind() == "deployment":
+            self._k8s.update_deployment_replica_number(
+                self._namespace, self._deployment_name, _replica)
+        else:
+            self._k8s.update_replica_set_replica_number(
+                self._namespace, self._replica_set_name, _replica)
+
     def scale_down(self, _replica=0):
         _logger.debug("START")
         self.update_scale_down()
-        self._k8s.update_replica_number(
-            self._namespace, self._deployment_name, _replica)
+        self.update_replica_number(_replica)
 
     def update_scale_down(self):
         _logger.debug("START")
@@ -73,13 +117,13 @@ class Scaler(object):
     def _update_annotation_call(self, _annotation):
         _logger.debug("START")
         _now_UTC = _toolbox.get_date_now_utc()
-        _updated_annotation = self._k8s.update_deployment_annotation(
-            self._namespace, self._deployment_name, _annotation, _now_UTC.isoformat())
+        _updated_annotation = self._k8s.update_config_map_annotation(
+            self._namespace, self._config_map_name, _annotation, _now_UTC.isoformat())
         return _updated_annotation
 
     def get_last_call_annotation(self):
-        _last_call_annotation = self._k8s.get_deployment_annotation(
-            self._namespace, self._deployment_name, self._last_call_at_annotation)
+        _last_call_annotation = self._k8s.get_config_map_annotation(
+            self._namespace, self._config_map_name, self._last_call_at_annotation)
         _logger.debug(f"_last_call_annotation {_last_call_annotation}")
         return _last_call_annotation
 
@@ -101,12 +145,6 @@ class Scaler(object):
 
         return False
 
-    def get_replica_number(self):
-        _logger.debug("START")
-        self._replicas = self._k8s.get_replica_number(
-            self._namespace, self._deployment_name)
-        return self._replicas
-
     def make_target_available(self):
         _logger.debug("START")
         self.get_replica_number()
@@ -114,8 +152,7 @@ class Scaler(object):
         _logger.debug(f"Current replica number: {self._replicas}")
 
         if self._replicas == 0 or self._replicas is None:
-            self._k8s.update_replica_number(
-                self._namespace, self._deployment_name, self._min_replicas)
+            self.update_replica_number(self._min_replicas)
             # wait endpoint is available
             __waiting_time_ms = self._waiting_time
             for i in range(1, self._max_retry):
