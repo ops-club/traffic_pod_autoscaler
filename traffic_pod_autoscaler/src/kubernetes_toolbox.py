@@ -58,12 +58,27 @@ class KubernetesToolbox(object):
 
             return api_response
 
-    def get_replica_number(self, _namespace, _deployment_name):
+    def get_deployment_replica_number(self, _namespace, _deployment_name):
         _logger.debug("START")
         with client.ApiClient(self._configuration) as api_client:
             api_instance = client.AppsV1Api(api_client)
             api_response = api_instance.read_namespaced_deployment(
                 name=_deployment_name, namespace=_namespace)
+
+            if api_response.status.available_replicas is None:
+                return 0
+            return api_response.status.available_replicas
+
+    def get_replica_set_replica_number(self, _namespace, _replica_set_name):
+        _logger.debug("START")
+
+        _replica_set_name_last = self.get_replica_set_name(
+            _namespace, _replica_set_name)
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.AppsV1Api(api_client)
+            api_response = api_instance.read_namespaced_replica_set(
+                name=_replica_set_name_last, namespace=_namespace)
 
             if api_response.status.available_replicas is None:
                 return 0
@@ -83,7 +98,33 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(e)
 
-    def update_replica_number(self, _namespace, _deployment_name, _replicas):
+    def get_config_map_annotation(self, _namespace, _config_map_name, _annotation):
+        _logger.debug("START")
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.CoreV1Api(api_client)
+            api_response = api_instance.read_namespaced_config_map(
+                name=_config_map_name, namespace=_namespace)
+
+        if _annotation in api_response.metadata.annotations:
+            return api_response.metadata.annotations[_annotation]
+        else:
+            return None
+
+    def update_config_map_annotation(self, _namespace, _config_map_name, _annotation, _annotation_value):
+        _logger.debug("START")
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.CoreV1Api(api_client)
+
+            _body = {"metadata": {"annotations": {
+                f"{_annotation}": _annotation_value}}}
+
+            try:
+                api_response = api_instance.patch_namespaced_config_map(
+                    name=_config_map_name, namespace=_namespace, body=_body, async_req=False)
+            except ApiException as e:
+                _logger.exception(e)
+
+    def update_deployment_replica_number(self, _namespace, _deployment_name, _replicas):
         _logger.debug("START")
         _logger.info(
             f"Updating replica number to {_replicas} due to traffic activity/inactivity")
@@ -97,6 +138,48 @@ class KubernetesToolbox(object):
                     name=_deployment_name, namespace=_namespace, body=_body, async_req=False)
             except ApiException as e:
                 _logger.exception(f"{e =} {api_response=}")
+
+    def update_replica_set_replica_number(self, _namespace, _replica_set_name, _replicas):
+        _logger.debug("START")
+        _logger.info(
+            f"Updating replica number to {_replicas} due to traffic activity/inactivity")
+
+        _replica_set_name_last = self.get_replica_set_name(
+            _namespace, _replica_set_name)
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.AppsV1Api(api_client)
+
+            _body = {"spec": {"replicas": _replicas}}
+            try:
+                api_response = api_instance.patch_namespaced_replica_set(
+                    name=_replica_set_name_last, namespace=_namespace, body=_body, async_req=False)
+            except ApiException as e:
+                _logger.exception(f"{e =} {api_response=}")
+
+    def get_replica_set_name(self, _namespace, _replica_set_name):
+        _logger.debug("START")
+        _replica_set_name_last = ''
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.AppsV1Api(api_client)
+            limit = 1
+            label_selector = ''
+
+            try:
+                api_response = api_instance.list_namespaced_replica_set(
+                    namespace=_namespace, label_selector=label_selector, limit=limit, watch=False)
+                for rs in api_response.items:
+                    _rs_name = rs.metadata.name
+                    if _rs_name.startswith(_replica_set_name):
+                        _replica_set_name_last = _rs_name
+
+            except ApiException as e:
+                _logger.exception(f"{e =} {api_response=}")
+
+            # _logger.info(f"find replica_set_name api_response: {api_response}")
+            _logger.info(f"find replica_set_name {_replica_set_name_last}")
+            return _replica_set_name_last
 
     # Endpoints
     def check_endpoint_available(self, _namespace, _endpoint_name):

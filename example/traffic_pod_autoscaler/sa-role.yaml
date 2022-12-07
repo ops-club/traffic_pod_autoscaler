@@ -8,6 +8,8 @@ rules:
       - apps
     resources:
       - deployments
+      - configmaps
+      - replicasets
     verbs:
       - get
       - list
@@ -17,6 +19,8 @@ rules:
     resources:
       - deployments
       - deployments/scale
+      - configmaps
+      - replicasets
     verbs:
       - patch
       - update
@@ -28,3 +32,14 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ''
+    resources:
+      - configmaps
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
