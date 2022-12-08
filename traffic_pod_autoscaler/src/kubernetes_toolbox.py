@@ -20,7 +20,23 @@ class KubernetesToolbox(object):
         else:
             self._configuration = config.load_kube_config()
 
+    def create_namespaced_config_map(self, _namespace, _config_map_name):
+        _logger.debug("START")
+
+        _body = {"metadata": {
+            "name": _config_map_name,
+            "namespace": _namespace,
+            "labels": {
+                "app.kubernetes.io/name": _config_map_name
+            }
+        }}
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.CoreV1Api(api_client)
+            api_response = api_instance.create_namespaced_config_map(
+                namespace=_namespace, body=_body)
     # Deployments
+
     def get_deployment_annotation(self, _namespace, _deployment_name, _annotation):
         _logger.debug("START")
         with client.ApiClient(self._configuration) as api_client:
@@ -100,15 +116,22 @@ class KubernetesToolbox(object):
 
     def get_config_map_annotation(self, _namespace, _config_map_name, _annotation):
         _logger.debug("START")
-        with client.ApiClient(self._configuration) as api_client:
-            api_instance = client.CoreV1Api(api_client)
-            api_response = api_instance.read_namespaced_config_map(
-                name=_config_map_name, namespace=_namespace)
+        try:
+            with client.ApiClient(self._configuration) as api_client:
+                api_instance = client.CoreV1Api(api_client)
+                api_response = api_instance.read_namespaced_config_map(
+                    name=_config_map_name, namespace=_namespace)
+                _logger.debug(f"{api_response}")
 
-        if _annotation in api_response.metadata.annotations:
-            return api_response.metadata.annotations[_annotation]
-        else:
-            return None
+            if _annotation in api_response.metadata.annotations:
+                return api_response.metadata.annotations[_annotation]
+        except ApiException as api_exception:
+            if api_exception.status == 404:
+                self.create_namespaced_config_map(_namespace, _config_map_name)
+            else:
+                _logger.exception(api_exception)
+
+        return None
 
     def update_config_map_annotation(self, _namespace, _config_map_name, _annotation, _annotation_value):
         _logger.debug("START")
@@ -139,25 +162,95 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(f"{e =} {api_response=}")
 
-    def update_replica_set_replica_number(self, _namespace, _replica_set_name, _replicas):
+    def update_replica_number(self, _namespace, _replica_set_name, _replicas):
         _logger.debug("START")
         _logger.info(
             f"Updating replica number to {_replicas} due to traffic activity/inactivity")
 
-        _replica_set_name_last = self.get_replica_set_name(
-            _namespace, _replica_set_name)
-
-        with client.ApiClient(self._configuration) as api_client:
-            api_instance = client.AppsV1Api(api_client)
+        try:
+            _replica_set_parents = self.get_replica_set_parents(
+                _namespace, _replica_set_name)
+            if len(_replica_set_parents) > 0:
+                _replica_set_parents = _replica_set_parents[0]
 
             _body = {"spec": {"replicas": _replicas}}
+
+            _version_full = _replica_set_parents.api_version.split("/")
+            _group = _version_full[0]
+            _version = _version_full[1]
+            _custom_object_name = _replica_set_parents.name
+            _custom_object_kind_plural = self.get_kind_plural(
+                _replica_set_parents.kind)
+            api_response = self.patch_namespaced_custom_object(
+                _namespace, _group, _version, _custom_object_name, _custom_object_kind_plural, _body)
+
+        except ApiException as e:
+            _logger.exception(f"{e}")
+
+    def get_kind_plural(self, _kind):
+        match _kind.lower():
+            case "rollout":
+                _kind_plural = "rollouts"
+            case "deployment":
+                _kind_plural = "deployments"
+
+        return _kind_plural
+
+    # def update_replica_set_replica_number(self, _namespace, _replica_set_name, _replicas):
+    #     _logger.debug("START")
+    #     _logger.info(
+    #         f"Updating replica number to {_replicas} due to traffic activity/inactivity")
+
+    #     _replica_set_name_last = self.get_replica_set_name(
+    #         _namespace, _replica_set_name)
+
+    #     with client.ApiClient(self._configuration) as api_client:
+    #         api_instance = client.AppsV1Api(api_client)
+
+    #         _body = {"spec": {"replicas": _replicas}}
+    #         try:
+    #             api_response = api_instance.patch_namespaced_replica_set(
+    #                 name=_replica_set_name_last, namespace=_namespace, body=_body, async_req=False)
+    #         except ApiException as e:
+    #             _logger.exception(f"{e =} {api_response=}")
+
+    def patch_namespaced_custom_object(self, _namespace, _group, _version, _custom_object_name, _custom_object_kind_plural, _body):
+
+        _logger.debug("START")
+        _logger.debug(f"Patch custom object {_custom_object_name} ")
+        _logger.debug(f"Patch custom object {_namespace =} ")
+        _logger.debug(f"Patch custom object {_group =} ")
+        _logger.debug(f"Patch custom object {_version =} ")
+        _logger.debug(f"Patch custom object {_custom_object_kind_plural =} ")
+        _logger.debug(f"Patch custom object {_body =} ")
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.CustomObjectsApi(api_client)
+
             try:
-                api_response = api_instance.patch_namespaced_replica_set(
-                    name=_replica_set_name_last, namespace=_namespace, body=_body, async_req=False)
+                # '/apis/{group}/{version}/namespaces/{namespace}/{plural}/{name}'
+                # '/apis/apps/v1/namespaces/{namespace}/deployments/{name}'
+                api_response = api_instance.patch_namespaced_custom_object(
+                    namespace=_namespace, group=_group, version=_version, name=_custom_object_name, plural=_custom_object_kind_plural, body=_body)
+                _logger.debug(f"Patch custom object {api_response} ")
+                return api_response
             except ApiException as e:
-                _logger.exception(f"{e =} {api_response=}")
+                _logger.exception(f"{e}")
 
     def get_replica_set_name(self, _namespace, _replica_set_name):
+        _logger.debug("START")
+        _replica_set_name_last = self.get_replica_set_field(
+            _namespace, _replica_set_name, "name")
+        return _replica_set_name_last
+
+    def get_replica_set_parents(self, _namespace, _replica_set_name):
+        _logger.debug("START")
+        _replica_set_parents = self.get_replica_set_field(
+            _namespace, _replica_set_name, "parents")
+
+        return _replica_set_parents
+
+    def get_replica_set_field(self, _namespace, _replica_set_name, _field):
         _logger.debug("START")
         _replica_set_name_last = ''
 
@@ -179,7 +272,10 @@ class KubernetesToolbox(object):
 
             # _logger.info(f"find replica_set_name api_response: {api_response}")
             _logger.info(f"find replica_set_name {_replica_set_name_last}")
-            return _replica_set_name_last
+            if _field == "name":
+                return _replica_set_name_last
+            elif _field == "parents":
+                return rs.metadata.owner_references
 
     # Endpoints
     def check_endpoint_available(self, _namespace, _endpoint_name):

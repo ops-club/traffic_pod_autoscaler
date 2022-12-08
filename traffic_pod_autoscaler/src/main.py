@@ -19,11 +19,11 @@ def parse_args():
     # parser.add_argument(
     #     "--rollout-api", help="Name of Rollout api version", default='argoproj.io/v1alpha1', required=False)
     parser.add_argument(
-        "--config-map", help="Name of ConfigMap to store annotation", required=True)
+        "--config-map", help="Name of ConfigMap to store annotation", required=False)
     parser.add_argument(
         "--endpoint", help="Name of Endpoints to watch for ready addresses", required=True)
     parser.add_argument(
-        "--target-kind", help="Name of kind where to save annotation: deployment or replica_set", default='deployment', required=False)
+        "--target-kind", help="Name of kind where to save annotation: deployment or replica_set", default='replica_set', required=False)
 
     parser.add_argument("--local-address",   help="Proxy listen address",
                         default='',  required=False)
