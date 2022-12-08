@@ -22,6 +22,7 @@ rules:
       - configmaps
       - replicasets
     verbs:
+      - create
       - patch
       - update
   - apiGroups:
@@ -41,5 +42,6 @@ rules:
       - get
       - list
       - watch
+      - create
       - patch
       - update

@@ -1,10 +1,10 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: traffic-pod-autoscaler-cm
-  namespace: webapp
-  labels:
-    app.kubernetes.io/name: traffic-pod-autoscaler    
-data:
-  target-kind: "rollout"
-  log-level: error
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: traffic-pod-autoscaler-cm
+#   namespace: webapp
+#   labels:
+#     app.kubernetes.io/name: traffic-pod-autoscaler-cm
+# data:
+#   target-kind: "replica_set"
+#   log-level: error

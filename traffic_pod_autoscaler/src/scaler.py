@@ -16,7 +16,7 @@ class Scaler(object):
     _replica_set_name = ""
     # _rollout_api = ""
     _target_kind = ""
-    _config_map_name = ""
+    _config_map_name = "traffic-pod-autoscaler-cm"
     _endpoint_name = ""
     _expiration_time: int = 1800
     _replicas = None
@@ -98,7 +98,7 @@ class Scaler(object):
             self._k8s.update_deployment_replica_number(
                 self._namespace, self._deployment_name, _replica)
         else:
-            self._k8s.update_replica_set_replica_number(
+            self._k8s.update_replica_number(
                 self._namespace, self._replica_set_name, _replica)
 
     def scale_down(self, _replica=0):
