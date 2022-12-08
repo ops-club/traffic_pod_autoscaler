@@ -17,7 +17,7 @@ spec:
       containers:
       - name: traffic-pod-autoscaler
         image: ops-club/traffic_pod_autoscaler:latest
-        imagePullPolicy: Never
+        imagePullPolicy: Always
         args:
         - --namespace=webapp
         - --local-port=9000
@@ -28,7 +28,7 @@ spec:
         - --endpoint=frontend-svc
         - --target-address=frontend-svc
         - --target-port=80
-        - --expiration-time=60
+        - --expiration-time=300
         - --check-interval=30
         - --log-level=DEBUG
         resources:
