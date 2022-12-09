@@ -120,3 +120,6 @@ roleRef:
   name: tpa-role
   apiGroup: rbac.authorization.k8s.io
 ```
+
+## Docker Hub
+https://hub.docker.com/r/opsclub/traffic_pod_autoscaler/tags
