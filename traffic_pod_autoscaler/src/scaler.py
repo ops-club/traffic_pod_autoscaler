@@ -103,7 +103,7 @@ class Scaler(object):
             self._k8s.update_deployment_replica_number(
                 self._namespace, self._deployment_name, _replica)
         else:
-            self._k8s.update_replica_number(
+            self._k8s.update_replica_set_number(
                 self._namespace, _replica, self._label_selector)
 
     def scale_down(self, _replica=0):
