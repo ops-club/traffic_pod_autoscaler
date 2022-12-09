@@ -14,6 +14,7 @@ class Scaler(object):
     _namespace = ""
     _deployment_name = ""
     _replica_set_name = ""
+    _label_selector = ""
     # _rollout_api = ""
     _target_kind = ""
     _config_map_name = "traffic-pod-autoscaler-cm"
@@ -39,6 +40,9 @@ class Scaler(object):
 
         if "replica_set" in args:
             self._replica_set_name = args.replica_set
+
+        if "label_selector" in args:
+            self._label_selector = args.label_selector
 
         # if "rollout_api" in args:
         #     self._rollout_api = args.rollout_api
@@ -76,30 +80,25 @@ class Scaler(object):
 
         self._k8s = KubernetesToolbox()
 
-    def get_target_kind(self):
-        if self._target_kind == "deployment":
-            return "deployment"
-        elif self._target_kind == "replica_set":
-            return "replica_set"
-
     def get_replica_number(self):
         _logger.debug("START")
-        if self.get_target_kind() == "deployment":
+        if self._target_kind == "deployment":
             self._replicas = self._k8s.get_deployment_replica_number(
                 self._namespace, self._deployment_name)
         else:
             self._replicas = self._k8s.get_replica_set_replica_number(
-                self._namespace, self._replica_set_name)
+                self._namespace, self._replica_set_name, self._label_selector)
 
         return self._replicas
 
     def update_replica_number(self, _replica=0):
-        if self.get_target_kind() == "deployment":
+        # TODO: this behaviour can be generic! just call the code in the "else" block
+        if self._target_kind == "deployment":
             self._k8s.update_deployment_replica_number(
                 self._namespace, self._deployment_name, _replica)
         else:
             self._k8s.update_replica_number(
-                self._namespace, self._replica_set_name, _replica)
+                self._namespace, self._replica_set_name, _replica, self._label_selector)
 
     def scale_down(self, _replica=0):
         _logger.debug("START")
