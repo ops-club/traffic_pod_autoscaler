@@ -86,11 +86,11 @@ class KubernetesToolbox(object):
                 return 0
             return api_response.status.available_replicas
 
-    def get_replica_set_replica_number(self, _namespace, _replica_set_name, _label_selector):
+    def get_replica_set_replica_number(self, _namespace, _label_selector):
         _logger.debug("START")
 
-        _replica_set_name_last = self.get_replica_set_name(
-            _namespace, _replica_set_name, _label_selector)
+        _replica_set_name_last = self.get_current_replica_set_name(
+            _namespace, _label_selector)
 
         with client.ApiClient(self._configuration) as api_client:
             api_instance = client.AppsV1Api(api_client)
@@ -169,7 +169,7 @@ class KubernetesToolbox(object):
             f"Updating replica number to {_replicas} due to traffic activity/inactivity")
 
         try:
-            _replica_set_parents = self.get_replica_set_parents(
+            _replica_set_parents = self.get_current_replica_set_parents(
                 _namespace, _replica_set_name, _label_selector)
             if len(_replica_set_parents) > 0:
                 _replica_set_parents = _replica_set_parents[0]
@@ -202,7 +202,7 @@ class KubernetesToolbox(object):
     #     _logger.info(
     #         f"Updating replica number to {_replicas} due to traffic activity/inactivity")
 
-    #     _replica_set_name_last = self.get_replica_set_name(
+    #     _replica_set_name_last = self.get_current_replica_set_name(
     #         _namespace, _replica_set_name)
 
     #     with client.ApiClient(self._configuration) as api_client:
@@ -238,43 +238,47 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(f"{e}")
 
-    def get_replica_set_name(self, _namespace, _replica_set_name, _label_selector):
+    def get_current_replica_set_name(self, _namespace, _label_selector):
         _logger.debug("START")
         _replica_set_name_last = self.get_replica_set_field(
-            _namespace, _replica_set_name, "name", _label_selector)
+            _namespace, "name", _label_selector)
         return _replica_set_name_last
 
-    def get_replica_set_parents(self, _namespace, _replica_set_name, _label_selector):
+    def get_current_replica_set_parents(self, _namespace, _label_selector):
         _logger.debug("START")
         _replica_set_parents = self.get_replica_set_field(
-            _namespace, _replica_set_name, "parents", _label_selector)
+            _namespace, "parents", _label_selector)
 
         return _replica_set_parents
 
-    def get_replica_set_field(self, _namespace, _replica_set_name, _field, _label_selector=''):
+    def get_replica_set_field(self, _namespace, _field, _label_selector=''):
         _logger.debug("START")
 
         with client.ApiClient(self._configuration) as api_client:
             api_instance = client.AppsV1Api(api_client)
-            limit = 1
+            limit = 100
+
             try:
                 api_response = api_instance.list_namespaced_replica_set(
                     namespace=_namespace, label_selector=_label_selector, limit=limit, watch=False)
-                for rs in api_response.items:
-                    _rs_name = rs.metadata.name
-                    if re.search(_replica_set_name + r"-[0-9a-f]{10}$", _rs_name):
-                        _replica_set_name_last = _rs_name
+                _rs = None
+                _rs_version = None
+                for __rs in api_response.items:
+                    __rs_version = __rs.metadata.resource_version
+                    if _rs_version is None or _rs_version < __rs_version:
+                        _rs = __rs
                         break
 
             except ApiException as e:
                 _logger.exception(f"{e =} {api_response=}")
 
             # _logger.info(f"find replica_set_name api_response: {api_response}")
-            _logger.debug(f"find replica_set_name {_replica_set_name_last}")
+            _logger.debug(f"find replica_set_name {_rs.metadata.name}")
+
             if _field == "name":
-                return _replica_set_name_last
+                return _rs.metadata.name
             elif _field == "parents":
-                return rs.metadata.owner_references
+                return _rs.metadata.owner_references
 
     # Endpoints
     def check_endpoint_available(self, _namespace, _endpoint_name):

@@ -14,12 +14,10 @@ def parse_args():
     parser.add_argument("--namespace", help="", required=True)
     parser.add_argument(
         "--deployment", help="Name of Deployment to scale", required=False)
-    parser.add_argument(
-        "--replica-set", help="Name of ReplicaSet to scale", required=False)
+
     parser.add_argument(
         "--label-selector", help="Label Selector on replicaset", required=False)
-    # parser.add_argument(
-    #     "--rollout-api", help="Name of Rollout api version", default='argoproj.io/v1alpha1', required=False)
+
     parser.add_argument(
         "--config-map", help="Name of ConfigMap to store annotation", required=False)
     parser.add_argument(
