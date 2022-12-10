@@ -15,8 +15,8 @@ class Proxy(object):
     local_address: string
     local_port: int
     _annotation_last_update: int
-    _update_annotation_minute: int = 1
-    _update_annotation_minute_delta: int
+    _update_annotation_second: int
+    _update_annotation_second_delta: int
     metrics_server: bool = False
     metrics_port: int
     _remote_address: string
@@ -45,8 +45,8 @@ class Proxy(object):
         if "remote_port" in args:
             self._remote_port = args.remote_port
 
-        if "update_annotation_minute" in args:
-            self._update_annotation_minute = args.update_annotation_minute
+        if "update_annotation_second" in args:
+            self._update_annotation_second = args.update_annotation_second
 
         _logger.info(f"Proxy local_address: {self.local_address}")
         _logger.info(f"Proxy local_port: {self.local_port}")
@@ -57,9 +57,9 @@ class Proxy(object):
         if self.metrics_server:
             _logger.info(f"Proxy metrics_port: {self.metrics_port}")
 
-        # Define n minutes as a timedelta object
-        self._update_annotation_minute_delta = _toolbox.get_date_timedelta_minutes(
-            self._update_annotation_minute)
+        # Define n seconds as a timedelta object
+        self._update_annotation_second_delta = _toolbox.get_date_timedelta_seconds(
+            self._update_annotation_second)
         # super(ClassName, self).__init__(*args))
 
     def set_scaler(self, _scaler: Scaler):
@@ -196,7 +196,7 @@ class Proxy(object):
 
             _diff = _now_UTC - _last_call_UTC
 
-            if _diff >= self._update_annotation_minute_delta:
+            if _diff >= self._update_annotation_second_delta:
                 self._scaler.update_last_call()
 
             self._scaler.make_target_available()

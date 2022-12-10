@@ -31,8 +31,8 @@ def parse_args():
     parser.add_argument("--local-port", help="Proxy listen port",
                         type=int, default=80, required=False)
 
-    parser.add_argument("--update-annotation-minute", help="time delta in minutes between two updates of the last call annotation",
-                        type=int, default=1, required=False)
+    parser.add_argument("--update-annotation-second", help="time delta in seconds between two updates of the last call annotation",
+                        type=int, default=30, required=False)
 
     parser.add_argument("--min-replicas", help="Number of replicas to start",
                         type=int, default=1, required=False)
