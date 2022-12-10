@@ -1,6 +1,6 @@
 .PHONY: build_app
 build_app:
-	docker build traffic_pod_autoscaler -t traffic_pod_autoscaler:latest
+	docker build traffic_pod_autoscaler -t ops-club/traffic_pod_autoscaler:latest --no-cache
 
 .PHONY: k_apply
 k_apply:
@@ -24,4 +24,4 @@ k_ingress_logs:
 
 .PHONY: k_ingress_forward
 k_ingress_forward:
-	kubectl port-forward --namespace=ingress-nginx service/ingress-nginx-controller --address 10.0.0.16 9000:80
+	kubectl port-forward --namespace=ingress-nginx service/ingress-nginx-controller --address 10.0.0.17 9000:80

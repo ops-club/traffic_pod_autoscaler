@@ -4,7 +4,7 @@ import select
 import string
 import sys
 import time
-
+from datetime import datetime, timedelta
 
 from LoggerToolbox import _logger
 from toolbox import _toolbox
@@ -14,10 +14,13 @@ from scaler import Scaler
 class Proxy(object):
     local_address: string
     local_port: int
+    _annotation_last_update: int
+    _update_annotation_minute: int = 1
+    _update_annotation_minute_delta: int
     metrics_server: bool = False
     metrics_port: int
-    remote_address: string
-    remote_port: int
+    _remote_address: string
+    _remote_port: int
     lsock: list = []
     msg_queue: dict = {}
     _scaler: Scaler
@@ -37,18 +40,26 @@ class Proxy(object):
             self.metrics_port = args.metrics_port
 
         if "remote_address" in args:
-            self.remote_address = args.remote_address
+            self._remote_address = args.remote_address
 
         if "remote_port" in args:
-            self.remote_port = args.remote_port
+            self._remote_port = args.remote_port
+
+        if "update_annotation_minute" in args:
+            self._update_annotation_minute = args.update_annotation_minute
 
         _logger.info(f"Proxy local_address: {self.local_address}")
         _logger.info(f"Proxy local_port: {self.local_port}")
+
+        _logger.info(f"Proxy remote_address: {self._remote_address}")
+        _logger.info(f"Proxy remote_port: {self._remote_port}")
+
         if self.metrics_server:
             _logger.info(f"Proxy metrics_port: {self.metrics_port}")
-        _logger.info(f"Proxy remote_address: {self.remote_address}")
-        _logger.info(f"Proxy remote_port: {self.remote_port}")
 
+        # Define n minutes as a timedelta object
+        self._update_annotation_minute_delta = _toolbox.get_date_timedelta_minutes(
+            self._update_annotation_minute)
         # super(ClassName, self).__init__(*args))
 
     def set_scaler(self, _scaler: Scaler):
@@ -124,7 +135,7 @@ class Proxy(object):
             try:
                 remote_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 remote_sock.connect(
-                    (self.remote_address, int(self.remote_port)))
+                    (self._remote_address, int(self._remote_port)))
                 return remote_sock
             except Exception as e:
                 counter += 1
@@ -177,7 +188,17 @@ class Proxy(object):
     def hit_request(self):
         _logger.debug("START")
         try:
-            self._scaler.update_last_call()
+            # add a delay to avoid updating the configmap too often
+            _last_call_annotation = self._scaler.get_last_call_annotation()
+            _last_call_UTC = _toolbox.get_date_utc_from_string(
+                _last_call_annotation)
+            _now_UTC = _toolbox.get_date_now_utc()
+
+            _diff = _now_UTC - _last_call_UTC
+
+            if _diff >= self._update_annotation_minute_delta:
+                self._scaler.update_last_call()
+
             self._scaler.make_target_available()
         except Exception as e:
             _logger.exception(e)

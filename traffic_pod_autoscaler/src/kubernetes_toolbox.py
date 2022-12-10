@@ -1,7 +1,6 @@
 from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
 from LoggerToolbox import _logger
-import re
 
 
 class KubernetesToolbox(object):
@@ -116,9 +115,9 @@ class KubernetesToolbox(object):
         #     api_response = api_instance.read_namespaced_replica_set(
         #         name=_replica_set_name_last, namespace=_namespace)
 
-        if api_response.spec.replicas is None:
-            return 0
-        return api_response.spec.replicas
+        if 'spec' in api_response and 'replicas' in api_response['spec']:
+            return api_response['spec']['replicas']
+        return 0
 
     def update_deployment_annotation(self, _namespace, _deployment_name, _annotation, _annotation_value):
         _logger.debug("START")
@@ -271,7 +270,7 @@ class KubernetesToolbox(object):
 
             try:
                 api_response = api_instance.get_namespaced_custom_object(
-                    namespace=_namespace, group=_group, version=_version, name=_custom_object_name, plural=_custom_object_kind_plural)
+                    namespace=_namespace, group=_group, version=_version, name=_custom_object_name, plural=_custom_object_kind_plural, async_req=False)
                 _logger.debug(f"Patch custom object {api_response} ")
                 return api_response
             except ApiException as e:

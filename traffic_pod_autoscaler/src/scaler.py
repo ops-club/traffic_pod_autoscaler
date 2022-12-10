@@ -3,7 +3,6 @@ from time import sleep
 from LoggerToolbox import _logger
 from toolbox import _toolbox
 from kubernetes_toolbox import KubernetesToolbox
-from datetime import datetime, timezone, timedelta
 
 
 class Scaler(object):
@@ -16,7 +15,7 @@ class Scaler(object):
     _label_selector = ""
     # _rollout_api = ""
     _target_kind = ""
-    _config_map_name = "traffic-pod-autoscaler-cm"
+    _config_map_name: str = ""
     _endpoint_name = ""
     _expiration_time: int = 1800
     _replicas = None
@@ -39,6 +38,8 @@ class Scaler(object):
 
         if "label_selector" in args:
             self._label_selector = args.label_selector
+            self._label_selector = self._label_selector.strip('"')
+            self._label_selector = self._label_selector.strip("'")
 
         # if "rollout_api" in args:
         #     self._rollout_api = args.rollout_api
@@ -126,26 +127,28 @@ class Scaler(object):
             self._namespace, self._config_map_name, _annotation, _now_UTC.isoformat())
         return _updated_annotation
 
-    def get_last_call_annotation(self):
+    def get_last_call_annotation(self, _count=0):
         _last_call_annotation = self._k8s.get_config_map_annotation(
             self._namespace, self._config_map_name, self._last_call_at_annotation)
         _logger.debug(f"_last_call_annotation {_last_call_annotation}")
+
+        if _last_call_annotation is None and _count == 0:
+            self.update_last_call()
+            _count += 1
+            _last_call_annotation = self.get_last_call_annotation(_count)
+
         return _last_call_annotation
 
     def is_expired(self):
         _logger.debug("START")
         _last_call_annotation = self.get_last_call_annotation()
 
-        if _last_call_annotation is None:
-            self.update_last_call()
-            _last_call_annotation = self.get_last_call_annotation()
-
         _last_call_UTC = _toolbox.get_date_utc_from_string(
             _last_call_annotation)
 
         _now_UTC = _toolbox.get_date_now_utc()
-
-        if (_last_call_UTC + timedelta(seconds=self._expiration_time)) < _now_UTC:
+        _timedelta = _toolbox.get_date_timedelta_seconds(self._expiration_time)
+        if (_last_call_UTC + _timedelta) < _now_UTC:
             return True
 
         return False

@@ -19,7 +19,8 @@ def parse_args():
         "--label-selector", help="Label Selector on replicaset", required=False)
 
     parser.add_argument(
-        "--config-map", help="Name of ConfigMap to store annotation", required=False)
+        "--config-map", help="Name of ConfigMap to store annotation", default="traffic-pod-autoscaler-cm", required=False)
+
     parser.add_argument(
         "--endpoint", help="Name of Endpoints to watch for ready addresses", required=True)
     parser.add_argument(
@@ -29,6 +30,9 @@ def parse_args():
                         default='',  required=False)
     parser.add_argument("--local-port", help="Proxy listen port",
                         type=int, default=80, required=False)
+
+    parser.add_argument("--update-annotation-minute", help="time delta in minutes between two updates of the last call annotation",
+                        type=int, default=1, required=False)
 
     parser.add_argument("--min-replicas", help="Number of replicas to start",
                         type=int, default=1, required=False)
