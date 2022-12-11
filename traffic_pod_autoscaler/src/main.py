@@ -2,7 +2,8 @@ import argparse
 
 from LoggerToolbox import _logger
 from proxy import Proxy
-from watcher import Watcher
+from scale_down_watcher import ScaleDownWatcher
+from proxy_watcher import ProxyWatcher
 from scaler import Scaler
 
 
@@ -20,6 +21,8 @@ def parse_args():
     #     "--rollout-api", help="Name of Rollout api version", default='argoproj.io/v1alpha1', required=False)
     parser.add_argument(
         "--config-map", help="Name of ConfigMap to store annotation", required=False)
+    parser.add_argument(
+        "--config-map-refresh-interval", help="Configmap refresh interval, in seconds", required=False, default=10)
     parser.add_argument(
         "--endpoint", help="Name of Endpoints to watch for ready addresses", required=True)
     parser.add_argument(
@@ -54,17 +57,6 @@ def parse_args():
 
     return _args
 
-
-def check_scale_down(_args, _scaler: Scaler):
-    _logger.debug("START")
-    is_expired = _scaler.is_expired()
-    _logger.debug(f"is_expired: {is_expired}")
-    if is_expired:
-        _replica = _scaler.get_replica_number()
-        if _replica > 0:
-            _scaler.scale_down()
-
-
 def main():
     _args = parse_args()
     _logger.set_level(_args.log_level)
@@ -73,15 +65,17 @@ def main():
 
     try:
         _scaler = Scaler(_args)
-        _watcher = Watcher(_args.check_interval,
-                           check_scale_down, _args, _scaler)
+        _scale_down_watcher = ScaleDownWatcher(_args, _scaler)
 
         _proxy = Proxy(_args)
-        _proxy.set_scaler(_scaler)
-        _proxy.run()
+        _proxy_watcher = ProxyWatcher(_args, _proxy)
+        #_proxy.set_scaler(_scaler)
+        #_proxy.run()
     finally:
         _logger.info("STOP WATCHER")
-        _watcher.stop()
+        _scale_down_watcher.stop()
+        _proxy_watcher.stop()
+       # _proxy.stop() ??? maybe implements this?
 
 
 if __name__ == "__main__":

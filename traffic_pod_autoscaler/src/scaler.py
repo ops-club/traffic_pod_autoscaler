@@ -114,13 +114,6 @@ class Scaler(object):
         _logger.debug("START")
         return self._update_annotation_call(self._last_call_at_annotation)
 
-    def _update_annotation_call(self, _annotation):
-        _logger.debug("START")
-        _now_UTC = _toolbox.get_date_now_utc()
-        _updated_annotation = self._k8s.update_config_map_annotation(
-            self._namespace, self._config_map_name, _annotation, _now_UTC.isoformat())
-        return _updated_annotation
-
     def get_last_call_annotation(self):
         _last_call_annotation = self._k8s.get_config_map_annotation(
             self._namespace, self._config_map_name, self._last_call_at_annotation)

@@ -21,6 +21,7 @@ class Proxy(object):
     lsock: list = []
     msg_queue: dict = {}
     _scaler: Scaler
+    _last_call_timestamp: time
 
     _stats_request: list = []
 
@@ -174,11 +175,15 @@ class Proxy(object):
     def get_stats_request(self):
         return self._stats_request
 
+    def get_last_call_timestamp(self):
+        return self._last_call_timestamp
+
     def hit_request(self):
         _logger.debug("START")
         try:
             self._scaler.update_last_call()
             self._scaler.make_target_available()
+            self._last_call_timestamp = _toolbox.get_date_now_utc()
         except Exception as e:
             _logger.exception(e)
 
