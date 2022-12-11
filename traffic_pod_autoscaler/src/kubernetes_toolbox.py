@@ -281,17 +281,17 @@ class KubernetesToolbox(object):
 
         return _replica_set_parents
 
-    def get_replica_set_field(self, _namespace, _field, _label_selector=''):
+    def get_replica_set_field(self, _namespace, _field, _label_selector='', _limit=1):
         _logger.debug("START")
+        _rs = None
 
         with client.ApiClient(self._configuration) as api_client:
             api_instance = client.AppsV1Api(api_client)
-            limit = 100
 
             try:
                 api_response = api_instance.list_namespaced_replica_set(
-                    namespace=_namespace, label_selector=_label_selector, limit=limit, watch=False)
-                _rs = None
+                    namespace=_namespace, label_selector=_label_selector, limit=_limit, watch=False)
+
                 for __rs in api_response.items:
                     _rs = __rs
                     break
@@ -306,6 +306,8 @@ class KubernetesToolbox(object):
                 return _rs.metadata.name
             elif _field == "parents":
                 return _rs.metadata.owner_references
+
+            return _rs
 
     # Endpoints
     def check_endpoint_available(self, _namespace, _endpoint_name):

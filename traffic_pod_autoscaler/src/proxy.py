@@ -4,7 +4,6 @@ import select
 import string
 import sys
 import time
-from datetime import datetime, timedelta
 
 from LoggerToolbox import _logger
 from toolbox import _toolbox
