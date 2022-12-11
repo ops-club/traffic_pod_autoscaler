@@ -85,7 +85,7 @@ class KubernetesToolbox(object):
                 return 0
             return api_response.status.available_replicas
 
-    def get_replica_set_replica_number(self, _namespace, _label_selector):
+    def get_replica_number(self, _namespace, _label_selector):
         _logger.debug("START")
         try:
             _replica_set_parents = self.get_replica_set_parents(
@@ -104,16 +104,6 @@ class KubernetesToolbox(object):
 
         except ApiException as e:
             _logger.exception(f"{e}")
-
-        # _replica_set_parents = self.get_replica_set_parents(
-        #     _namespace, _label_selector)
-        # if len(_replica_set_parents) > 0:
-        #     _replica_set_parents = _replica_set_parents[0]
-
-        # with client.ApiClient(self._configuration) as api_client:
-        #     api_instance = client.AppsV1Api(api_client)
-        #     api_response = api_instance.read_namespaced_replica_set(
-        #         name=_replica_set_name_last, namespace=_namespace)
 
         if 'spec' in api_response and 'replicas' in api_response['spec']:
             return api_response['spec']['replicas']
@@ -165,6 +155,8 @@ class KubernetesToolbox(object):
                     name=_config_map_name, namespace=_namespace, body=_body, async_req=False)
             except ApiException as e:
                 _logger.exception(e)
+
+            return api_response
 
     def update_deployment_replica_number(self, _namespace, _deployment_name, _replicas):
         _logger.debug("START")

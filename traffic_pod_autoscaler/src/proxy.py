@@ -15,6 +15,7 @@ class Proxy(object):
     local_address: string
     local_port: int
     _annotation_last_update: int
+    _last_call = None
     _update_annotation_second: int
     _update_annotation_second_delta: int
     metrics_server: bool = False
@@ -188,17 +189,7 @@ class Proxy(object):
     def hit_request(self):
         _logger.debug("START")
         try:
-            # add a delay to avoid updating the configmap too often
-            _last_call_annotation = self._scaler.get_last_call_annotation()
-            _last_call_UTC = _toolbox.get_date_utc_from_string(
-                _last_call_annotation)
-            _now_UTC = _toolbox.get_date_now_utc()
-
-            _diff = _now_UTC - _last_call_UTC
-
-            if _diff >= self._update_annotation_second_delta:
-                self._scaler.update_last_call()
-
+            self._last_call = _toolbox.get_date_now_utc()
             self._scaler.make_target_available()
         except Exception as e:
             _logger.exception(e)
@@ -211,3 +202,18 @@ class Proxy(object):
                 'when': _toolbox.get_date_now_utc()
             }
         )
+
+    def update_annotation_last_call(self):
+        try:
+            if self._last_call is not None:
+                # use watcher to avoid updating the configmap too often
+                _last_call_annotation = self._scaler.get_last_call_annotation()
+                _last_call_annotation_UTC = _toolbox.get_date_utc_from_string(
+                    _last_call_annotation)
+
+                _diff = self._last_call - _last_call_annotation_UTC
+
+                if _diff > _toolbox.get_date_timedelta_seconds(5):
+                    self._scaler.update_last_call()
+        except Exception as e:
+            _logger.exception(e)

@@ -12,19 +12,22 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--namespace", help="", required=True)
-    parser.add_argument(
-        "--deployment", help="Name of Deployment to scale", required=False)
-
-    parser.add_argument(
-        "--label-selector", help="Label Selector on replicaset", required=False)
-
-    parser.add_argument(
-        "--config-map", help="Name of ConfigMap to store annotation", default="traffic-pod-autoscaler-cm", required=False)
 
     parser.add_argument(
         "--endpoint", help="Name of Endpoints to watch for ready addresses", required=True)
+
     parser.add_argument(
-        "--target-kind", help="Name of kind where to save annotation: deployment or replica_set", default='replica_set', required=False)
+        "--label-selector", help="Label Selector on replicaset", required=True)
+
+    parser.add_argument("--target-address", help="target address to which requests should be proxied (typically the Service name)",
+                        dest="remote_address", required=True)
+    parser.add_argument("--target-port", help="Target listen port",
+                        dest="remote_port", type=int, default=80, required=False)
+    parser.add_argument("--min-replicas", help="Number of replicas to start",
+                        type=int, default=1, required=False)
+
+    parser.add_argument(
+        "--config-map", help="Name of ConfigMap to store annotation", default="traffic-pod-autoscaler-cm", required=False)
 
     parser.add_argument("--local-address",   help="Proxy listen address",
                         default='',  required=False)
@@ -33,14 +36,6 @@ def parse_args():
 
     parser.add_argument("--update-annotation-second", help="time delta in seconds between two updates of the last call annotation",
                         type=int, default=30, required=False)
-
-    parser.add_argument("--min-replicas", help="Number of replicas to start",
-                        type=int, default=1, required=False)
-
-    parser.add_argument("--target-address", help="target address to which requests should be proxied (typically the Service name)",
-                        dest="remote_address", required=True)
-    parser.add_argument("--target-port", help="Target listen port",
-                        dest="remote_port", type=int, default=80, required=False)
 
     parser.add_argument("--check-interval", help="Time between two checks (for the scaler to trigger scale down)",
                         dest="check_interval", type=int, default=60, required=False)
@@ -69,6 +64,11 @@ def check_scale_down(_args, _scaler: Scaler):
             _scaler.scale_down()
 
 
+def check_hit(_args, _proxy: Proxy):
+    _logger.debug("START")
+    _proxy.update_annotation_last_call()
+
+
 def main():
     _args = parse_args()
     _logger.set_level(_args.log_level)
@@ -77,15 +77,20 @@ def main():
 
     try:
         _scaler = Scaler(_args)
-        _watcher = Watcher(_args.check_interval,
-                           check_scale_down, _args, _scaler)
+        _watcher_scale_down = Watcher(_args.check_interval,
+                                      check_scale_down, _args, _scaler)
 
         _proxy = Proxy(_args)
         _proxy.set_scaler(_scaler)
+
+        _watcher_request_hit = Watcher(_args.update_annotation_second,
+                                       check_hit, _args, _proxy)
+
         _proxy.run()
     finally:
         _logger.info("STOP WATCHER")
-        _watcher.stop()
+        _watcher_scale_down.stop()
+        _watcher_request_hit.stop()
 
 
 if __name__ == "__main__":

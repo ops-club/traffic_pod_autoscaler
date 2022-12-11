@@ -22,7 +22,6 @@ spec:
         - --namespace=webapp
         - --local-port=9000
         - --label-selector='app=guestbook'
-        - --target-kind=replica_set
         - --endpoint=frontend-svc
         - --target-address=frontend-svc
         - --target-port=80

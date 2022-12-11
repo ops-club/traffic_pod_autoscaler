@@ -19,5 +19,10 @@ class Toolbox(object):
         _timedelta = timedelta(seconds=_seconds)
         return _timedelta
 
+    def get_date_age(self, _date):
+        _now_UTC = self.get_date_now_utc()
+        _diff = _now_UTC - _date
+        return _diff
+
 
 _toolbox = Toolbox()
