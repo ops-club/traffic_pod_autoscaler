@@ -1,9 +1,8 @@
 
 from time import sleep
-from LoggerToolbox import _logger
-from toolbox import _toolbox
-from kubernetes_toolbox import KubernetesToolbox
-from datetime import datetime, timezone, timedelta
+from libs.LoggerToolbox import _logger
+from libs.Toolbox import _toolbox
+from libs.KubernetesToolbox import KubernetesToolbox
 
 
 class Scaler(object):
@@ -12,14 +11,13 @@ class Scaler(object):
     _scale_down_at_annotation = 'traffic-pod-autoscaler/last-scale-down-at'
 
     _namespace = ""
-    _deployment_name = ""
-    _replica_set_name = ""
-    # _rollout_api = ""
-    _target_kind = ""
-    _config_map_name = "traffic-pod-autoscaler-cm"
+    _rs_rs_label_selector = ""
+    _config_map_name: str = ""
     _endpoint_name = ""
     _expiration_time: int = 1800
     _replicas = None
+    _replicas_check = None
+    _replicas_cache_second = 5
     _min_replicas: int = 1
     _max_retry: int = 30
     _waiting_time: int = 1000
@@ -34,17 +32,10 @@ class Scaler(object):
         if "namespace" in args:
             self._namespace = args.namespace
 
-        if "deployment" in args:
-            self._deployment_name = args.deployment
-
-        if "replica_set" in args:
-            self._replica_set_name = args.replica_set
-
-        # if "rollout_api" in args:
-        #     self._rollout_api = args.rollout_api
-
-        if "target_kind" in args:
-            self._target_kind = args.target_kind
+        if "rs_label_selector" in args:
+            self._rs_label_selector = args.rs_label_selector
+            self._rs_label_selector = self._rs_label_selector.strip('"')
+            self._rs_label_selector = self._rs_label_selector.strip("'")
 
         if "config_map" in args:
             self._config_map_name = args.config_map
@@ -62,49 +53,47 @@ class Scaler(object):
             self._min_replicas = args.min_replicas
 
         _logger.info(f"Watching namespace: {self._namespace}")
-        _logger.info(f"Watching deployment: {self._deployment_name}")
         _logger.info(f"Watching config_map: {self._config_map_name}")
-        _logger.info(f"Watching replica_set: {self._replica_set_name}")
-        # _logger.info(f"Watching rollout_api: {self._rollout_api}")
-        _logger.info(f"Watching target_kind: {self._target_kind}")
+        _logger.info(f"Watching rs_label_selector: {self._rs_label_selector}")
         _logger.info(f"Watching endpoint: {self._endpoint_name}")
         _logger.info(
             f"Traffic expiration time: {self._expiration_time} (in seconds)")
         _logger.info(
-            f"Time between 2 checks): {self._waiting_time} (in ms)")
+            f"Time between 2 checks: {self._waiting_time} (in ms)")
         _logger.info(f"Max retries: {self._max_retry}")
 
         self._k8s = KubernetesToolbox()
 
-    def get_target_kind(self):
-        if self._target_kind == "deployment":
-            return "deployment"
-        elif self._target_kind == "replica_set":
-            return "replica_set"
-
     def get_replica_number(self):
         _logger.debug("START")
-        if self.get_target_kind() == "deployment":
-            self._replicas = self._k8s.get_deployment_replica_number(
-                self._namespace, self._deployment_name)
+
+        # add cache
+        if self._replicas is not None:
+            if self._replicas > 0:
+                if self._replicas_check is not None:
+                    if _toolbox.get_date_age(self._replicas_check) < _toolbox.get_date_timedelta_seconds(self._replicas_cache_second):
+                        _logger.debug("use cache")
+                        return self._replicas
+
+        self._replicas = self._k8s.get_replica_number(
+            self._namespace, self._rs_label_selector)
+
+        if self._replicas > 0:
+            self._replicas_check = _toolbox.get_date_now_utc()
         else:
-            self._replicas = self._k8s.get_replica_set_replica_number(
-                self._namespace, self._replica_set_name)
+            self._replicas_check = None
 
         return self._replicas
 
     def update_replica_number(self, _replica=0):
-        if self.get_target_kind() == "deployment":
-            self._k8s.update_deployment_replica_number(
-                self._namespace, self._deployment_name, _replica)
-        else:
-            self._k8s.update_replica_number(
-                self._namespace, self._replica_set_name, _replica)
+        self._k8s.update_replica_set_number(
+            self._namespace, _replica, self._rs_label_selector)
 
     def scale_down(self, _replica=0):
         _logger.debug("START")
         self.update_scale_down()
         self.update_replica_number(_replica)
+        self._replicas = 0
 
     def update_scale_down(self):
         _logger.debug("START")
@@ -121,26 +110,28 @@ class Scaler(object):
             self._namespace, self._config_map_name, _annotation, _now_UTC.isoformat())
         return _updated_annotation
 
-    def get_last_call_annotation(self):
+    def get_last_call_annotation(self, _count=0):
         _last_call_annotation = self._k8s.get_config_map_annotation(
             self._namespace, self._config_map_name, self._last_call_at_annotation)
         _logger.debug(f"_last_call_annotation {_last_call_annotation}")
+
+        if _last_call_annotation is None and _count == 0:
+            self.update_last_call()
+            _count += 1
+            _last_call_annotation = self.get_last_call_annotation(_count)
+
         return _last_call_annotation
 
     def is_expired(self):
         _logger.debug("START")
         _last_call_annotation = self.get_last_call_annotation()
 
-        if _last_call_annotation is None:
-            self.update_last_call()
-            _last_call_annotation = self.get_last_call_annotation()
-
         _last_call_UTC = _toolbox.get_date_utc_from_string(
             _last_call_annotation)
 
         _now_UTC = _toolbox.get_date_now_utc()
-
-        if (_last_call_UTC + timedelta(seconds=self._expiration_time)) < _now_UTC:
+        _timedelta = _toolbox.get_date_timedelta_seconds(self._expiration_time)
+        if (_last_call_UTC + _timedelta) < _now_UTC:
             return True
 
         return False

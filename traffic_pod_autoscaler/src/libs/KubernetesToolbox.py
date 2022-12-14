@@ -1,6 +1,6 @@
 from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
-from LoggerToolbox import _logger
+from libs.LoggerToolbox import _logger
 
 
 class KubernetesToolbox(object):
@@ -85,20 +85,29 @@ class KubernetesToolbox(object):
                 return 0
             return api_response.status.available_replicas
 
-    def get_replica_set_replica_number(self, _namespace, _replica_set_name):
+    def get_replica_number(self, _namespace, _label_selector):
         _logger.debug("START")
+        try:
+            _replica_set_parents = self.get_replica_set_parents(
+                _namespace, _label_selector)
+            if len(_replica_set_parents) > 0:
+                _replica_set_parents = _replica_set_parents[0]
 
-        _replica_set_name_last = self.get_replica_set_name(
-            _namespace, _replica_set_name)
+            _version_full = _replica_set_parents.api_version.split("/")
+            _group = _version_full[0]
+            _version = _version_full[1]
+            _custom_object_name = _replica_set_parents.name
+            _custom_object_kind_plural = self.get_kind_plural(
+                _replica_set_parents.kind)
+            api_response = self.get_namespaced_custom_object(
+                _namespace, _group, _version, _custom_object_name, _custom_object_kind_plural)
 
-        with client.ApiClient(self._configuration) as api_client:
-            api_instance = client.AppsV1Api(api_client)
-            api_response = api_instance.read_namespaced_replica_set(
-                name=_replica_set_name_last, namespace=_namespace)
+        except ApiException as e:
+            _logger.exception(f"{e}")
 
-            if api_response.status.available_replicas is None:
-                return 0
-            return api_response.status.available_replicas
+        if 'spec' in api_response and 'replicas' in api_response['spec']:
+            return api_response['spec']['replicas']
+        return 0
 
     def update_deployment_annotation(self, _namespace, _deployment_name, _annotation, _annotation_value):
         _logger.debug("START")
@@ -147,6 +156,8 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(e)
 
+            return api_response
+
     def update_deployment_replica_number(self, _namespace, _deployment_name, _replicas):
         _logger.debug("START")
         _logger.info(
@@ -162,14 +173,14 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(f"{e =} {api_response=}")
 
-    def update_replica_number(self, _namespace, _replica_set_name, _replicas):
+    def update_replica_set_number(self, _namespace, _replicas, _label_selector):
         _logger.debug("START")
         _logger.info(
             f"Updating replica number to {_replicas} due to traffic activity/inactivity")
 
         try:
             _replica_set_parents = self.get_replica_set_parents(
-                _namespace, _replica_set_name)
+                _namespace, _label_selector)
             if len(_replica_set_parents) > 0:
                 _replica_set_parents = _replica_set_parents[0]
 
@@ -237,45 +248,66 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(f"{e}")
 
-    def get_replica_set_name(self, _namespace, _replica_set_name):
+    def get_namespaced_custom_object(self, _namespace, _group, _version, _custom_object_name, _custom_object_kind_plural):
+
+        _logger.debug("START")
+        _logger.debug(f"Patch custom object {_custom_object_name} ")
+        _logger.debug(f"Patch custom object {_namespace =} ")
+        _logger.debug(f"Patch custom object {_group =} ")
+        _logger.debug(f"Patch custom object {_version =} ")
+        _logger.debug(f"Patch custom object {_custom_object_kind_plural =} ")
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.CustomObjectsApi(api_client)
+
+            try:
+                api_response = api_instance.get_namespaced_custom_object(
+                    namespace=_namespace, group=_group, version=_version, name=_custom_object_name, plural=_custom_object_kind_plural, async_req=False)
+                _logger.debug(f"Patch custom object {api_response} ")
+                return api_response
+            except ApiException as e:
+                _logger.exception(f"{e}")
+
+    def get_replica_set_name(self, _namespace, _label_selector):
         _logger.debug("START")
         _replica_set_name_last = self.get_replica_set_field(
-            _namespace, _replica_set_name, "name")
+            _namespace, "name", _label_selector)
         return _replica_set_name_last
 
-    def get_replica_set_parents(self, _namespace, _replica_set_name):
+    def get_replica_set_parents(self, _namespace, _label_selector):
         _logger.debug("START")
         _replica_set_parents = self.get_replica_set_field(
-            _namespace, _replica_set_name, "parents")
+            _namespace, "parents", _label_selector)
 
         return _replica_set_parents
 
-    def get_replica_set_field(self, _namespace, _replica_set_name, _field):
+    def get_replica_set_field(self, _namespace, _field, _label_selector='', _limit=1):
         _logger.debug("START")
-        _replica_set_name_last = ''
+        _rs = None
 
         with client.ApiClient(self._configuration) as api_client:
             api_instance = client.AppsV1Api(api_client)
-            limit = 1
-            label_selector = ''
 
             try:
                 api_response = api_instance.list_namespaced_replica_set(
-                    namespace=_namespace, label_selector=label_selector, limit=limit, watch=False)
-                for rs in api_response.items:
-                    _rs_name = rs.metadata.name
-                    if _rs_name.startswith(_replica_set_name):
-                        _replica_set_name_last = _rs_name
+                    namespace=_namespace, label_selector=_label_selector, limit=_limit, watch=False)
+
+                for __rs in api_response.items:
+                    _rs = __rs
+                    break
 
             except ApiException as e:
                 _logger.exception(f"{e =} {api_response=}")
 
             # _logger.info(f"find replica_set_name api_response: {api_response}")
-            _logger.info(f"find replica_set_name {_replica_set_name_last}")
+            _logger.debug(f"find replica_set_name {_rs.metadata.name}")
+
             if _field == "name":
-                return _replica_set_name_last
+                return _rs.metadata.name
             elif _field == "parents":
-                return rs.metadata.owner_references
+                return _rs.metadata.owner_references
+
+            return _rs
 
     # Endpoints
     def check_endpoint_available(self, _namespace, _endpoint_name):

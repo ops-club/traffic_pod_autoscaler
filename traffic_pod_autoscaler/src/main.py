@@ -1,9 +1,10 @@
 import argparse
 
-from LoggerToolbox import _logger
-from proxy import Proxy
-from watcher import Watcher
-from scaler import Scaler
+from libs.LoggerToolbox import _logger
+from Proxy import Proxy
+from ProxyWatcher import ProxyWatcher
+from Scaler import Scaler
+from ScalerWatcher import ScalerWatcher
 
 
 def parse_args():
@@ -12,31 +13,33 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--namespace", help="", required=True)
-    parser.add_argument(
-        "--deployment", help="Name of Deployment to scale", required=False)
-    parser.add_argument(
-        "--replica-set", help="Name of ReplicaSet to scale", required=False)
-    # parser.add_argument(
-    #     "--rollout-api", help="Name of Rollout api version", default='argoproj.io/v1alpha1', required=False)
-    parser.add_argument(
-        "--config-map", help="Name of ConfigMap to store annotation", required=False)
+
     parser.add_argument(
         "--endpoint", help="Name of Endpoints to watch for ready addresses", required=True)
+
     parser.add_argument(
-        "--target-kind", help="Name of kind where to save annotation: deployment or replica_set", default='replica_set', required=False)
+        "--rs-label-selector", help="Label Selector on replicaset", required=True)
+
+    parser.add_argument("--target-address", help="target address to which requests should be proxied (typically the Service name)",
+                        dest="remote_address", required=True)
+    parser.add_argument("--target-port", help="Target listen port",
+                        dest="remote_port", type=int, default=80, required=False)
+    parser.add_argument("--min-replicas", help="Number of replicas to start",
+                        type=int, default=1, required=False)
+
+    parser.add_argument(
+        "--config-map", help="Name of ConfigMap to store annotation", default="traffic-pod-autoscaler-cm", required=False)
 
     parser.add_argument("--local-address",   help="Proxy listen address",
                         default='',  required=False)
     parser.add_argument("--local-port", help="Proxy listen port",
                         type=int, default=80, required=False)
 
-    parser.add_argument("--min-replicas", help="Number of replicas to start",
-                        type=int, default=1, required=False)
+    parser.add_argument("--sock-max-handle-buffer", help="TCP Sock Proxy number of connection can be handle before rejected",
+                        type=int, default=200, required=False)
 
-    parser.add_argument("--target-address", help="target address to which requests should be proxied (typically the Service name)",
-                        dest="remote_address", required=True)
-    parser.add_argument("--target-port", help="Target listen port",
-                        dest="remote_port", type=int, default=80, required=False)
+    parser.add_argument("--update-annotation-refresh-interval", help="time delta in seconds between two updates of the last call annotation",
+                        type=int, default=20, required=False)
 
     parser.add_argument("--check-interval", help="Time between two checks (for the scaler to trigger scale down)",
                         dest="check_interval", type=int, default=60, required=False)
@@ -55,16 +58,6 @@ def parse_args():
     return _args
 
 
-def check_scale_down(_args, _scaler: Scaler):
-    _logger.debug("START")
-    is_expired = _scaler.is_expired()
-    _logger.debug(f"is_expired: {is_expired}")
-    if is_expired:
-        _replica = _scaler.get_replica_number()
-        if _replica > 0:
-            _scaler.scale_down()
-
-
 def main():
     _args = parse_args()
     _logger.set_level(_args.log_level)
@@ -73,15 +66,18 @@ def main():
 
     try:
         _scaler = Scaler(_args)
-        _watcher = Watcher(_args.check_interval,
-                           check_scale_down, _args, _scaler)
+        _scaler_watcher = ScalerWatcher(_args.check_interval, _args, _scaler)
 
         _proxy = Proxy(_args)
         _proxy.set_scaler(_scaler)
+        _proxy_watcher = ProxyWatcher(
+            _args.update_annotation_refresh_interval, _args, _proxy)
+
         _proxy.run()
     finally:
         _logger.info("STOP WATCHER")
-        _watcher.stop()
+        _scaler_watcher.stop()
+        _proxy_watcher.stop()
 
 
 if __name__ == "__main__":

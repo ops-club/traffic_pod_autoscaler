@@ -1,14 +1,13 @@
 from threading import Timer
-from LoggerToolbox import _logger
+from libs.LoggerToolbox import _logger
 
 
 class Watcher(object):
 
-    def __init__(self, interval, function, *args, **kwargs):
+    def __init__(self, interval, *args, **kwargs):
         _logger.debug("START")
         self._timer = None
         self.interval = interval
-        self.function = function
         self.args = args
         self.kwargs = kwargs
         self.is_running = False
@@ -18,7 +17,7 @@ class Watcher(object):
         _logger.debug("START")
         self.is_running = False
         self.start()
-        self.function(*self.args, **self.kwargs)
+        self._watcher_function(*self.args, **self.kwargs)
 
     def start(self):
         _logger.debug("START")
@@ -31,3 +30,7 @@ class Watcher(object):
         _logger.debug("START")
         self._timer.cancel()
         self.is_running = False
+
+    def _watcher_function(self, _args, _kwargs):
+        _logger.debug("START")
+        pass
