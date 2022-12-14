@@ -21,10 +21,7 @@ spec:
         args:
         - --namespace=webapp
         - --local-port=9000
-        - --deployment=frontend
-        - --replica-set=frontend
-        - --target-kind=replica_set
-        - --config-map=traffic-pod-autoscaler-cm
+        - --rs-label-selector='app=guestbook'
         - --endpoint=frontend-svc
         - --target-address=frontend-svc
         - --target-port=80
