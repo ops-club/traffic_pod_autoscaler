@@ -7,3 +7,11 @@ services:
       context: traffic_pod_autoscaler
     ports:
       - 8088:80
+      - 8888:8888
+    environment:
+      - LOGLEVEL=DEBUG
+    command:
+      - --namespace=fake
+      - --endpoint=fake
+      - --rs-label-selector=fake
+      - --target-address=fake-svc

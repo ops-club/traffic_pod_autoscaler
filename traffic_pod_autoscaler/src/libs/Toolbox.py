@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-
+import os
 
 class Toolbox(object):
 
@@ -23,6 +23,16 @@ class Toolbox(object):
         _now_UTC = self.get_date_now_utc()
         _diff = _now_UTC - _date
         return _diff
+
+    def get_environment_variable(env_key, default_value=None):
+        if env_key in os.environ and os.environ[env_key]:
+            value = os.environ[env_key]
+            return value
+        else:
+            if default_value is not None:
+                return default_value
+            else:
+                raise Exception("Configuration not found: {}".format(env_key))
 
 
 _toolbox = Toolbox()

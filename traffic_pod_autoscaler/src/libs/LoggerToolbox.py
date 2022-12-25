@@ -1,6 +1,8 @@
 import inspect
 from datetime import datetime, timezone
 
+from libs.Toolbox import Toolbox
+
 
 class LoggerToolbox(object):
 
@@ -10,9 +12,13 @@ class LoggerToolbox(object):
     level_code_ERROR = 40
     level_code_CRITICAL = 50
 
-    # Setting default level to INFO
-    _level_code = level_code_INFO
     _level = "INFO"
+    _level_code = level_code_INFO
+
+    def __init__(self):
+        # Setting default level to INFO if not defined
+        self._level = Toolbox.get_environment_variable("LOGLEVEL", "INFO")
+        self._level_code = self.getLevelCode(self._level)
 
     def set_level(self, _level):
         self._level = _level

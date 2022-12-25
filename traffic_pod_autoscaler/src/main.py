@@ -5,6 +5,7 @@ from Proxy import Proxy
 from ProxyWatcher import ProxyWatcher
 from Scaler import Scaler
 from ScalerWatcher import ScalerWatcher
+from MonitoringServer import MonitoringServer
 
 
 def parse_args():
@@ -35,6 +36,13 @@ def parse_args():
     parser.add_argument("--local-port", help="Proxy listen port",
                         type=int, default=80, required=False)
 
+    parser.add_argument("--local-monitoring-port", help="Proxy monitoring listen port",
+                        type=int, default=8888, required=False)
+    parser.add_argument("--local-monitoring-url", help="Proxy monitoring URL",
+                         default="/stats", required=False)
+    parser.add_argument("--local-ping-url", help="Proxy ping URL",
+                         default="/tpa-ping", required=False)
+
     parser.add_argument("--sock-max-handle-buffer", help="TCP Sock Proxy number of connection can be handle before rejected",
                         type=int, default=200, required=False)
 
@@ -60,7 +68,6 @@ def parse_args():
 
 def main():
     _args = parse_args()
-    _logger.set_level(_args.log_level)
     _logger.debug("START")
     _logger.debug(f"{_args =}")
 
@@ -73,9 +80,12 @@ def main():
         _proxy_watcher = ProxyWatcher(
             _args.update_annotation_refresh_interval, _args, _proxy)
 
+        _monitoring_server = MonitoringServer(_args, _proxy)
+
         _proxy.run()
     finally:
         _logger.info("STOP WATCHER")
+        _monitoring_server.stop()
         _scaler_watcher.stop()
         _proxy_watcher.stop()
 
