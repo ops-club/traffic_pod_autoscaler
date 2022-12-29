@@ -5,6 +5,8 @@ from Proxy import Proxy
 from ProxyWatcher import ProxyWatcher
 from Scaler import Scaler
 from ScalerWatcher import ScalerWatcher
+from PodsWatcher import PodsWatcher
+from HTTPServer import HTTPServer
 
 
 def parse_args():
@@ -43,6 +45,8 @@ def parse_args():
 
     parser.add_argument("--check-interval", help="Time between two checks (for the scaler to trigger scale down)",
                         dest="check_interval", type=int, default=60, required=False)
+    parser.add_argument("--pods-check-interval", help="Time between two checks on pods number",
+                        dest="pods_check_interval", type=int, default=5, required=False)
     parser.add_argument("--expiration-time", help="Traffic inactivity duration before scaling to zero (in seconds)",
                         dest="expiration_time", type=int, default=1800, required=False)
 
@@ -52,6 +56,13 @@ def parse_args():
                         dest="max_retry", type=int, default=30, required=False)
     parser.add_argument("--waiting-time", help="Waiting time in ms before 2 retries if endpoint is not yet available",
                         dest="waiting_time", type=int, default=1000, required=False)
+
+    parser.add_argument("--http-server-port", help="HTTP server listen port",
+                        type=int, default=8080, required=False)
+    parser.add_argument("--metrics-url", help="HTTP server metrics URL",
+                        default="/metrics", required=False)
+    parser.add_argument("--ping-url", help="HTTP server ping URL",
+                        default="/ping", required=False)
 
     _args = parser.parse_args()
 
@@ -67,17 +78,23 @@ def main():
     try:
         _scaler = Scaler(_args)
         _scaler_watcher = ScalerWatcher(_args.check_interval, _args, _scaler)
+        _pods_watcher = PodsWatcher(_args.pods_check_interval, _args, _scaler)
 
         _proxy = Proxy(_args)
         _proxy.set_scaler(_scaler)
         _proxy_watcher = ProxyWatcher(
             _args.update_annotation_refresh_interval, _args, _proxy)
 
+        _httpserver = HTTPServer(_args, _proxy)
+
         _proxy.run()
+
     finally:
         _logger.info("STOP WATCHER")
+        _httpserver.stop()
         _scaler_watcher.stop()
         _proxy_watcher.stop()
+        _pods_watcher.stop()
 
 
 if __name__ == "__main__":

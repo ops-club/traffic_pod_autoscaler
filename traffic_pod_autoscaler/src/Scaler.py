@@ -11,7 +11,7 @@ class Scaler(object):
     _scale_down_at_annotation = 'traffic-pod-autoscaler/last-scale-down-at'
 
     _namespace = ""
-    _rs_rs_label_selector = ""
+    _rs_label_selector = ""
     _config_map_name: str = ""
     _endpoint_name = ""
     _expiration_time: int = 1800
@@ -26,6 +26,8 @@ class Scaler(object):
     def __init__(self, args):
         _logger.debug("START")
 
+        self._k8s = KubernetesToolbox()
+
         if "expiration_time" in args:
             self._expiration_time = args.expiration_time
 
@@ -33,9 +35,8 @@ class Scaler(object):
             self._namespace = args.namespace
 
         if "rs_label_selector" in args:
-            self._rs_label_selector = args.rs_label_selector
-            self._rs_label_selector = self._rs_label_selector.strip('"')
-            self._rs_label_selector = self._rs_label_selector.strip("'")
+            self._rs_label_selector = self._k8s.sanitize_label_selector(
+                args.rs_label_selector)
 
         if "config_map" in args:
             self._config_map_name = args.config_map
@@ -62,7 +63,16 @@ class Scaler(object):
             f"Time between 2 checks: {self._waiting_time} (in ms)")
         _logger.info(f"Max retries: {self._max_retry}")
 
-        self._k8s = KubernetesToolbox()
+    def set_replica_number(self, _replicas):
+
+        if _replicas > 0:
+            self._replicas_check = _toolbox.get_date_now_utc()
+        else:
+            self._replicas_check = None
+
+        self._replicas = _replicas
+
+        return self._replicas
 
     def get_replica_number(self):
         _logger.debug("START")
@@ -75,15 +85,9 @@ class Scaler(object):
                         _logger.debug("use cache")
                         return self._replicas
 
-        self._replicas = self._k8s.get_replica_number(
+        _replicas = self._k8s.get_replica_number(
             self._namespace, self._rs_label_selector)
-
-        if self._replicas > 0:
-            self._replicas_check = _toolbox.get_date_now_utc()
-        else:
-            self._replicas_check = None
-
-        return self._replicas
+        return self.set_replica_number(_replicas)
 
     def update_replica_number(self, _replica=0):
         self._k8s.update_replica_set_number(

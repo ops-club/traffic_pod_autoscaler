@@ -12,15 +12,29 @@ metadata:
     nginx.org/slow-start: "20s"
     # nginx.org/main-snippets: |
     #    load_module /usr/lib/modules/xyz_module.so
-    nginx.org/server-snippets: |
-      location /ping {
-        return 302 /pong;
-      }     
+    # nginx.org/server-snippets: |
+    #   location /ping {
+    #     return 302 /pong;
+    #   }     
 spec:
   # ingressClassName: nginx
   rules:
   - http:
       paths:
+      - path: /ping
+        pathType: Exact
+        backend:
+          service:
+              name: traffic-pod-autoscaler-svc
+              port:
+                number: 8080
+      - path: /metrics
+        pathType: Exact
+        backend:
+          service:
+              name: traffic-pod-autoscaler-svc
+              port:
+                number: 8080
       - path: /
         pathType: Prefix
         backend:

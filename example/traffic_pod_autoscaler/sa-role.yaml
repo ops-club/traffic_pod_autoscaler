@@ -10,6 +10,7 @@ rules:
       - deployments
       - configmaps
       - replicasets
+      - pods
     verbs:
       - get
       - list
@@ -29,6 +30,7 @@ rules:
       - ''
     resources:
       - endpoints
+      - pods
     verbs:
       - get
       - list
