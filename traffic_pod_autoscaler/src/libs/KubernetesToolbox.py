@@ -20,6 +20,11 @@ class KubernetesToolbox(object):
         else:
             self._configuration = config.load_kube_config()
 
+    def sanitize_label_selector(self, _label_selector):
+        _label_selector = _label_selector.strip('"')
+        _label_selector = _label_selector.strip("'")
+        return _label_selector
+
     def create_namespaced_config_map(self, _namespace, _config_map_name):
         _logger.debug("START")
 
@@ -335,3 +340,14 @@ class KubernetesToolbox(object):
             else:
                 _logger.debug("subsets not found")
             return False
+
+    def list_namespaced_pod(self, _namespace, _label_selector):
+        _logger.debug("START")
+
+        with client.ApiClient(self._configuration) as api_client:
+            api_instance = client.CoreV1Api(api_client)
+
+            api_response = api_instance.list_namespaced_pod(
+                namespace=_namespace, label_selector=_label_selector, timeout_seconds=1)
+            _logger.debug(f"{api_response =}")
+            return api_response
