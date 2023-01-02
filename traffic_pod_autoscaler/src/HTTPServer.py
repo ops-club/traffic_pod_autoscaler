@@ -29,5 +29,6 @@ class HTTPServer(object):
         _logger.info(f"HTTP Server started on port {_http_server_port}")
 
     def stop(self):
-        self._webServer._stop()
+        self._webServer.stop_requested = True
+        self._webServer.stop()
         _logger.info("HTTP server stopped.")
