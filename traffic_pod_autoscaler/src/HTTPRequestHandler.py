@@ -17,6 +17,9 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
 
         super().__init__(*args, **kwargs)
 
+    def log_message(self, format, *args):
+                return
+
     def do_GET(self):
         _logger.debug(f"Received request on {self.path}")
         match self.path:
