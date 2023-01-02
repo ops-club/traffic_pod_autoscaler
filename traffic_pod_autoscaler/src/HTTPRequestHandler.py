@@ -18,7 +18,10 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
+        match self.path:
+            case self._ping_url:
                 return
+        return super().log_message(format, *args)
 
     def do_GET(self):
         _logger.debug(f"Received request on {self.path}")
