@@ -14,6 +14,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--role", help="", default="proxy", required=False,)
     parser.add_argument("--namespace", help="", required=True)
 
     parser.add_argument(
@@ -77,24 +78,36 @@ def main():
 
     try:
         _scaler = Scaler(_args)
-        _scaler_watcher = ScalerWatcher(_args.check_interval, _args, _scaler)
-        _pods_watcher = PodsWatcher(_args.pods_check_interval, _args, _scaler)
 
-        _proxy = Proxy(_args)
-        _proxy.set_scaler(_scaler)
-        _proxy_watcher = ProxyWatcher(
-            _args.update_annotation_refresh_interval, _args, _proxy)
+        if _args.role == 'proxy':
+            _proxy = Proxy(_args)
+            _proxy.set_scaler(_scaler)
 
-        _httpserver = HTTPServer(_args, _proxy)
+            _httpserver = HTTPServer(_args, _proxy)
 
-        _proxy.run()
+            _proxy_watcher = ProxyWatcher(
+                _args.update_annotation_refresh_interval, _args, _proxy)
+
+            _pods_watcher = PodsWatcher(
+                _args.pods_check_interval, _args, _scaler)
+            _proxy.run()
+
+        else:
+            _scaler_watcher = ScalerWatcher(
+                _args.check_interval, _args, _scaler)
+            import time
+
+            while True:
+                time.sleep(1)
 
     finally:
         _logger.info("STOP WATCHER")
-        _httpserver.stop()
-        _scaler_watcher.stop()
-        _proxy_watcher.stop()
-        _pods_watcher.stop()
+        if _args.role == 'proxy':
+            _proxy_watcher.stop()
+            _pods_watcher.stop()
+            _httpserver.stop()
+        else:
+            _scaler_watcher.stop()
 
 
 if __name__ == "__main__":

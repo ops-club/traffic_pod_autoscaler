@@ -7,7 +7,7 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: traffic-pod-autoscaler
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
@@ -15,10 +15,11 @@ spec:
     spec:
       serviceAccountName: traffic-pod-autoscaler-sa
       containers:
-      - name: traffic-pod-autoscaler
+      - name: traffic-pod-autoscaler-watcher
         image: ops-club/traffic_pod_autoscaler:latest
         imagePullPolicy: Always
         args:
+        - --role=watcher
         - --namespace=webapp
         - --local-port=9000
         - --rs-label-selector='app=guestbook'
@@ -32,6 +33,3 @@ spec:
           requests:
             cpu: 100m
             memory: 100Mi
-        ports:
-        - containerPort: 9000
-        - containerPort: 8080
