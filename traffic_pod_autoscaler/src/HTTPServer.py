@@ -7,7 +7,7 @@ from Proxy import Proxy
 
 
 class HTTPServer(object):
-    _webServer = None
+    _webServer: threading.Thread = None
 
     def __init__(self, _args, _proxy: Proxy):
         _logger.debug("START")
@@ -29,5 +29,5 @@ class HTTPServer(object):
         _logger.info(f"HTTP Server started on port {_http_server_port}")
 
     def stop(self):
-        self._webServer.server_close()
+        self._webServer._stop()
         _logger.info("HTTP server stopped.")
