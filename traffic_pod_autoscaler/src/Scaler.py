@@ -147,6 +147,7 @@ class Scaler(object):
         _logger.debug(f"Current replica number: {self._replicas}")
 
         if self._replicas == 0 or self._replicas is None:
+            self.update_last_call()
             self.update_replica_number(self._min_replicas)
             # wait endpoint is available
             __waiting_time_ms = self._waiting_time
