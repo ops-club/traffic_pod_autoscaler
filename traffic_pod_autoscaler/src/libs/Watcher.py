@@ -27,7 +27,7 @@ class Watcher(object):
             self.is_running = True
 
     def stop(self):
-        _logger.debug("START")
+        _logger.info("Watcher stopped.")
         self._timer.cancel()
         self.is_running = False
 
