@@ -30,5 +30,5 @@ class HTTPServer(object):
 
     def stop(self):
         self._webServer.stop_requested = True
-        self._webServer.stop()
+        self._webServer._stop()
         _logger.info("HTTP server stopped.")
