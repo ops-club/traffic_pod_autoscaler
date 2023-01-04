@@ -114,7 +114,7 @@ class Proxy(object):
                     data = self.received_from(s, 3)
 
                     self.msg_queue[s].setblocking(False)
-                    self.msg_queue[s].send(data.encode())
+                    self.msg_queue[s].send(data)
 
                     if len(data) == 0:
                         self.close_sock(s)
