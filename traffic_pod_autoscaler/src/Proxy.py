@@ -112,6 +112,8 @@ class Proxy(object):
                             client.close()
 
                     data = self.received_from(s, 3)
+                    if isinstance(data, str):
+                        data = data.encode("utf-8") 
 
                     self.msg_queue[s].setblocking(False)
                     self.msg_queue[s].send(data)
