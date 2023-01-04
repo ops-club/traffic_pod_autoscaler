@@ -110,8 +110,12 @@ class Proxy(object):
                             _logger.info(
                                 'Connection with {} is closed'.format(addr[0]))
                             client.close()
+
                     data = self.received_from(s, 3)
-                    self.msg_queue[s].send(data)
+
+                    self.msg_queue[s].setblocking(False)
+                    self.msg_queue[s].send(data.encode())
+
                     if len(data) == 0:
                         self.close_sock(s)
                         break
