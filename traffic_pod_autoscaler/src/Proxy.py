@@ -111,7 +111,7 @@ class Proxy(object):
                                 'Connection with {} is closed'.format(addr[0]))
                             client.close()
 
-                    data = self.received_from(s, 3)
+                    data = self.received_from(s, 120)
                     if isinstance(data, str):
                         data = data.encode("utf-8") 
 
