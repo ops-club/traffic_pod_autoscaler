@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 class LoggerToolbox(object):
 
+    level_code_TRACE = 0
     level_code_DEBUG = 10
     level_code_INFO = 20
     level_code_WARNING = 30
@@ -21,6 +22,8 @@ class LoggerToolbox(object):
     def getLevelName(self, _level):
         level_name = "ERROR"
         match _level:
+            case self.level_code_TRACE:
+                level_name = "TRACE"
             case self.level_code_DEBUG:
                 level_name = "DEBUG"
             case self.level_code_INFO:
@@ -38,6 +41,8 @@ class LoggerToolbox(object):
         level_code = self.level_code_INFO
 
         match _level:
+            case "TRACE":
+                level_code = self.level_code_TRACE
             case "DEBUG":
                 level_code = self.level_code_DEBUG
             case "INFO":
@@ -77,6 +82,9 @@ class LoggerToolbox(object):
         _parent_file_lineno = _inspect_obj.lineno
         self._log(
             f"[{_parent_filename}::{_parent_function}::{_parent_file_lineno}] {_message}", "DEBUG")
+
+    def trace(self, _message):
+        self._log(_message, "TRACE")
 
 
 _logger = LoggerToolbox()
