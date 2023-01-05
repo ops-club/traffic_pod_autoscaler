@@ -26,6 +26,8 @@ def parse_args():
                         dest="remote_address", required=True)
     parser.add_argument("--target-port", help="Target listen port",
                         dest="remote_port", type=int, default=80, required=False)
+    parser.add_argument("--target-timeout", help="Target listen timeout",
+                        dest="remote_timeout", type=int, default=120, required=False)
     parser.add_argument("--min-replicas", help="Number of replicas to start",
                         type=int, default=1, required=False)
 
@@ -88,7 +90,8 @@ def main():
         _httpserver = HTTPServer(_args, _proxy)
 
         _proxy.run()
-
+    except Exception as e:
+        _logger.exception(f"Exception:main_main:{e}")
     finally:
         _logger.info("STOP WATCHER")
         _httpserver.stop()
