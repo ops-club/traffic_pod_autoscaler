@@ -131,7 +131,7 @@ class Proxy(object):
             _logger.debug(
                 f"Failed to listen on {self.local_address}:{self.local_port}")
             _logger.exception(f"Exception::{e}")
-            sys.exit(0)
+            sys.exit(1)
             # return 1
         # finally:
             # sys.exit(0)
