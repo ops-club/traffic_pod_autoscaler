@@ -82,7 +82,7 @@ class Proxy(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            sock.setblocking(0)
+            sock.setblocking(True)
             sock.bind((self.local_address, int(self.local_port)))
             sock.listen(self._sock_max_handle_buffer)
             self.lsock.append(sock)
