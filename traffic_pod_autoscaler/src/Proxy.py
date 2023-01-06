@@ -21,7 +21,6 @@ class Proxy(object):
     metrics_port: int
     _remote_address: string
     _remote_port: int
-    remote_timeout: int
     _sock_max_handle_buffer: int = 200
     lsock: list = []
     msg_queue: dict = {}
@@ -50,9 +49,6 @@ class Proxy(object):
         if "sock_max_handle_buffer" in args:
             self._sock_max_handle_buffer = args.sock_max_handle_buffer
 
-        if "remote_timeout" in args:
-            self.remote_timeout = args.remote_timeout
-
         if "update_annotation_refresh_interval" in args:
             self._update_annotation_refresh_interval = args.update_annotation_refresh_interval
 
@@ -61,7 +57,6 @@ class Proxy(object):
 
         _logger.info(f"Proxy remote_address: {self._remote_address}")
         _logger.info(f"Proxy remote_port: {self._remote_port}")
-        _logger.info(f"Proxy remote_timeout: {self.remote_timeout}")
 
         if self.metrics_server:
             _logger.info(f"Proxy metrics_port: {self.metrics_port}")
@@ -115,18 +110,6 @@ class Proxy(object):
                         if rserver:
                             try:
 
-                                ########################
-                                ########################
-                                ########################
-                                # tmp do debug
-                                # from random import randrange
-                                # number = randrange(10)
-                                # if number % 2 == 0:
-                                #     raise Exception("Sorry, 502")
-                                ########################
-                                ########################
-                                ########################
-
                                 client, addr = sock.accept()
 
                                 self.stats_add_request_infos(addr[0])
@@ -145,12 +128,6 @@ class Proxy(object):
                         _logger.exception(
                             f"Exception:Proxy_tcp_server_received_from:{e}")
 
-                    # number = randrange(10)
-                    # if number % 2 == 0:
-                    #     data = ''
-                    #     _logger.info('force data to empty str')
-                    # _logger.trace(f"Exception:data_debug:{data}")
-
                     if not isinstance(data, bytes):
                         data = bytes(data, 'utf-8')
 
@@ -167,7 +144,7 @@ class Proxy(object):
                             self.close_sock(s)
                             # client.close()
                         except Exception as e:
-                            _logger.info(f"Exception:client.close: {e}")
+                            _logger.exception(f"Exception:client.close: {e}")
                     else:
                         _logger.trace(
                             f'Received {len(data)} bytes from client ')
@@ -184,7 +161,6 @@ class Proxy(object):
         while (counter < max_attempts):
             try:
                 remote_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                # remote_sock.settimeout(int(self.remote_timeout))
                 remote_sock.connect(
                     (self._remote_address, int(self._remote_port)))
 
@@ -221,11 +197,11 @@ class Proxy(object):
         except socket.error as err:
             # Handle the Errno 107 error
             if err.errno == 107:
-                _logger.info("The connection was closed by the server.")
+                _logger.exception("The connection was closed by the server.")
                 # Re-establish the connection and try again
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 _addr = sock.getsockname()
-                _logger.info(
+                _logger.exception(
                     f"Try to connect to the server:{_addr}")
                 sock.connect(_addr)
                 sock.send(_data)
@@ -239,7 +215,6 @@ class Proxy(object):
         BUFF_SIZE = 4096
         _data = b""
 
-        # sock.settimeout(int(self.remote_timeout))
         sock.setblocking(False)
 
         try:

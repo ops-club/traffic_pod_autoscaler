@@ -26,8 +26,7 @@ def parse_args():
                         dest="remote_address", required=True)
     parser.add_argument("--target-port", help="Target listen port",
                         dest="remote_port", type=int, default=80, required=False)
-    parser.add_argument("--target-timeout", help="Target listen timeout",
-                        dest="remote_timeout", type=int, default=30, required=False)
+
     parser.add_argument("--min-replicas", help="Number of replicas to start",
                         type=int, default=1, required=False)
 
@@ -73,8 +72,7 @@ def parse_args():
 
 def main():
     _args = parse_args()
-    # _logger.set_level(_args.log_level)
-    _logger.set_level("DEBUG")
+    _logger.set_level(_args.log_level)
     _logger.debug("START")
     _logger.debug(f"{_args =}")
 
