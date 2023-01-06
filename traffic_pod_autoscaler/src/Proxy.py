@@ -209,13 +209,20 @@ class Proxy(object):
                 # Handle other errors
                 _logger.debug("An error occurred:", err)
 
-    def received_from(self, sock: socket.socket):
+    def received_from(self, sock: socket.socket, _reconnect=False):
         _logger.debug("START")
 
         BUFF_SIZE = 4096
         _data = b""
 
         sock.setblocking(False)
+        if _reconnect:
+            # Re-establish the connection and try again
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            _addr = sock.getsockname()
+            _logger.debug(
+                f"Try to connect to the server:{_addr}")
+            sock.connect(_addr)
 
         try:
             while True:
@@ -233,7 +240,10 @@ class Proxy(object):
                     if err.errno == 107:
                         _logger.debug(
                             "The connection was closed by the server.")
-                        break
+                        if _reconnect:
+                            pass
+                        else:
+                            return self.received_from(sock, True)
                     elif err.errno == 110:
                         _logger.debug(
                             "The connection was timeout by the server.")
