@@ -135,7 +135,7 @@ class Proxy(object):
                         self.send_data(self.msg_queue[s], data)
 
                     except Exception as e:
-                        _logger.exception(f"Exception:send_data:{e}")
+                        _logger.debug(f"Exception:send_data:{e}")
 
                     if len(data) == 0:
                         _logger.trace(
@@ -144,7 +144,7 @@ class Proxy(object):
                             self.close_sock(s)
                             # client.close()
                         except Exception as e:
-                            _logger.exception(f"Exception:client.close: {e}")
+                            _logger.debug(f"Exception:client.close: {e}")
                     else:
                         _logger.trace(
                             f'Received {len(data)} bytes from client ')
@@ -197,11 +197,11 @@ class Proxy(object):
         except socket.error as err:
             # Handle the Errno 107 error
             if err.errno == 107:
-                _logger.exception("The connection was closed by the server.")
+                _logger.debug("The connection was closed by the server.")
                 # Re-establish the connection and try again
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 _addr = sock.getsockname()
-                _logger.exception(
+                _logger.debug(
                     f"Try to connect to the server:{_addr}")
                 sock.connect(_addr)
                 sock.send(_data)
