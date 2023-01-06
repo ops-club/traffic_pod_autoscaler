@@ -221,8 +221,8 @@ class Proxy(object):
         BUFF_SIZE = 4096
         _data = b""
 
-        sock.setblocking(False)
-        # sock.settimeout(120)
+        sock.setblocking(True)
+        # sock.settimeout(int(self._remote_timeout))
         if _reconnect:
             # Re-establish the connection and try again
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
