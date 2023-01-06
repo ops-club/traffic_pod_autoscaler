@@ -186,7 +186,7 @@ class Proxy(object):
         while (counter < max_attempts):
             try:
                 remote_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                remote_sock.settimeout(int(self.remote_timeout))
+                # remote_sock.settimeout(int(self.remote_timeout))
                 remote_sock.connect(
                     (self._remote_address, int(self._remote_port)))
 
