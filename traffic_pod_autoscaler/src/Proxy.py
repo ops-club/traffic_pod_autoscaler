@@ -50,7 +50,7 @@ class Proxy(object):
         if "remote_timeout" in args:
             self._remote_timeout = args.remote_timeout
 
-        socket.setdefaulttimeout(120)
+        # socket.setdefaulttimeout(120)
 
         if "sock_max_handle_buffer" in args:
             self._sock_max_handle_buffer = args.sock_max_handle_buffer
@@ -221,7 +221,8 @@ class Proxy(object):
         BUFF_SIZE = 4096
         _data = b""
 
-        sock.setblocking(False)
+        # sock.setblocking(False)
+        sock.settimeout(120)
         if _reconnect:
             # Re-establish the connection and try again
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
