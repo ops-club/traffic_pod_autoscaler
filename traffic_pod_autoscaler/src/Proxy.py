@@ -151,7 +151,7 @@ class Proxy(object):
                     #     _logger.info('force data to empty str')
                     # _logger.trace(f"Exception:data_debug:{data}")
 
-                    if isinstance(data, str):
+                    if not isinstance(data, bytes):
                         data = bytes(data, 'utf-8')
 
                     try:
