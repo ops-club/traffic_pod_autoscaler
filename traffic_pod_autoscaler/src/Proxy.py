@@ -250,7 +250,8 @@ class Proxy(object):
                         if _reconnect:
                             pass
                         else:
-                            return self.received_from(sock, True)
+                            # return self.received_from(sock, True)
+                            break
                     elif err.errno == 110:
                         _logger.debug(
                             "The connection was timeout by the server.")
