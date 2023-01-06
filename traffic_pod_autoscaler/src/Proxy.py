@@ -155,9 +155,7 @@ class Proxy(object):
                         data = bytes(data, 'utf-8')
 
                     try:
-                        if self.sock_is_open(s):
-                            self.msg_queue[s].setblocking(False)
-                            self.msg_queue[s].send(data)
+                        self.send_data(self.msg_queue[s], data)
 
                     except Exception as e:
                         _logger.exception(f"Exception:send_data:{e}")
@@ -212,6 +210,25 @@ class Proxy(object):
             self.msg_queue[rserver] = client
         except Exception as e:
             _logger.exception(e)
+
+    def send_data(self, sock: socket.socket, _data):
+        try:
+            if self.sock_is_open(sock):
+                # Send data over the socket
+                sock.setblocking(False)
+                sock.send(_data)
+
+        except socket.error as err:
+            # Handle the Errno 107 error
+            if err.errno == 107:
+                # Re-establish the connection and try again
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                _addr = sock.getsockname()
+                sock.connect(_addr)
+                sock.send(_data)
+            else:
+                # Handle other errors
+                _logger.debug("An error occurred:", err)
 
     def received_from(self, sock: socket.socket):
         _logger.debug("START")
