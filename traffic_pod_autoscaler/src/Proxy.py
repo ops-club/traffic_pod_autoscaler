@@ -155,8 +155,10 @@ class Proxy(object):
                         data = bytes(data, 'utf-8')
 
                     try:
-                        self.msg_queue[s].setblocking(False)
-                        self.msg_queue[s].send(data)
+                        if self.sock_is_open(s):
+                            self.msg_queue[s].setblocking(False)
+                            self.msg_queue[s].send(data)
+
                     except Exception as e:
                         _logger.exception(f"Exception:send_data:{e}")
 
@@ -218,13 +220,36 @@ class Proxy(object):
         _data = b""
 
         sock.settimeout(int(self.remote_timeout))
+        # Check the status of the socket
+        if self.sock_is_open(sock):
+            pass
+        else:
+            pass
 
         try:
             while True:
-                data = sock.recv(BUFF_SIZE)
-                _data += data
-                if not data or len(data) < BUFF_SIZE:
-                    break
+                try:
+                    if self.sock_is_open(sock):
+                        data = sock.recv(BUFF_SIZE)
+                        _data += data
+                        if not data or len(data) < BUFF_SIZE:
+                            break
+                    else:
+                        break
+
+                except socket.error as err:
+
+                    if err.errno == 107:
+                        _logger.debug(
+                            "The connection was closed by the server.")
+                        break
+                    elif err.errno == 110:
+                        _logger.debug(
+                            "The connection was timeout by the server.")
+                        break
+                    else:
+                        break
+
         except Exception as e:
             _logger.exception(f"Exception:Proxy_received_from:{e}")
 
@@ -232,13 +257,27 @@ class Proxy(object):
 
     def close_sock(self, sock):
         _logger.debug('End of connection with {}'.format(sock.getpeername()))
+
         self.lsock.remove(self.msg_queue[sock])
         self.lsock.remove(self.msg_queue[self.msg_queue[sock]])
         serv = self.msg_queue[sock]
-        self.msg_queue[serv].close()
-        self.msg_queue[sock].close()
+
+        # Check the status of the socket
+        if self.sock_is_open(sock):
+            _logger.debug("The socket is open and connected.")
+            self.msg_queue[serv].close()
+            self.msg_queue[sock].close()
+        else:
+            _logger.debug("The socket is closed.")
+
         del self.msg_queue[sock]
         del self.msg_queue[serv]
+
+    def sock_is_open(self, sock):
+        # Check the status of the socket
+        if sock.fileno() > 0:
+            return True
+        return False
 
     def get_stats_request(self):
         return self._stats_request
