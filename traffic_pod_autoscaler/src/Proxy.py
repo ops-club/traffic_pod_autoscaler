@@ -221,9 +221,12 @@ class Proxy(object):
         except socket.error as err:
             # Handle the Errno 107 error
             if err.errno == 107:
+                _logger.info("The connection was closed by the server.")
                 # Re-establish the connection and try again
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 _addr = sock.getsockname()
+                _logger.info(
+                    f"Try to connect to the server:{_addr}")
                 sock.connect(_addr)
                 sock.send(_data)
             else:
