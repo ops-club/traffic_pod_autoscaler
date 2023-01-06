@@ -73,7 +73,8 @@ def parse_args():
 
 def main():
     _args = parse_args()
-    _logger.set_level(_args.log_level)
+    # _logger.set_level(_args.log_level)
+    _logger.set_level("DEBUG")
     _logger.debug("START")
     _logger.debug(f"{_args =}")
 
