@@ -239,7 +239,8 @@ class Proxy(object):
         BUFF_SIZE = 4096
         _data = b""
 
-        sock.settimeout(int(self.remote_timeout))
+        # sock.settimeout(int(self.remote_timeout))
+        sock.setblocking(False)
 
         try:
             while True:
