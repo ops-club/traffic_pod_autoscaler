@@ -21,7 +21,7 @@ class Proxy(object):
     metrics_port: int
     _remote_address: string
     _remote_port: int
-    remote_timeout: int = 30
+    remote_timeout: int
     _sock_max_handle_buffer: int = 200
     lsock: list = []
     msg_queue: dict = {}
