@@ -240,11 +240,6 @@ class Proxy(object):
         _data = b""
 
         sock.settimeout(int(self.remote_timeout))
-        # Check the status of the socket
-        if self.sock_is_open(sock):
-            pass
-        else:
-            pass
 
         try:
             while True:

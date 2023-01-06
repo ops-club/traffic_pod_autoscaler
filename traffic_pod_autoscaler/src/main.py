@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument("--target-port", help="Target listen port",
                         dest="remote_port", type=int, default=80, required=False)
     parser.add_argument("--target-timeout", help="Target listen timeout",
-                        dest="remote_timeout", type=int, default=3, required=False)
+                        dest="remote_timeout", type=int, default=30, required=False)
     parser.add_argument("--min-replicas", help="Number of replicas to start",
                         type=int, default=1, required=False)
 
