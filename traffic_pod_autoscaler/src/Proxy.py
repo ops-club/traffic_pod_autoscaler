@@ -21,6 +21,7 @@ class Proxy(object):
     metrics_port: int
     _remote_address: string
     _remote_port: int
+    _remote_timeout: int
     _sock_max_handle_buffer: int = 200
     lsock: list = []
     msg_queue: dict = {}
@@ -45,6 +46,11 @@ class Proxy(object):
 
         if "remote_port" in args:
             self._remote_port = args.remote_port
+
+        if "remote_timeout" in args:
+            self._remote_timeout = args.remote_timeout
+
+        socket.setdefaulttimeout(120)
 
         if "sock_max_handle_buffer" in args:
             self._sock_max_handle_buffer = args.sock_max_handle_buffer
@@ -219,7 +225,7 @@ class Proxy(object):
         if _reconnect:
             # Re-establish the connection and try again
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            _addr = sock.getsockname()
+            _addr = (self._remote_address, int(self._remote_port))
             _logger.debug(
                 f"Try to connect to the server:{_addr}")
             sock.connect(_addr)
