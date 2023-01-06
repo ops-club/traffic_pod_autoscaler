@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - refacto_proxy
     tags:
       - "v*.*.*"
     paths:
