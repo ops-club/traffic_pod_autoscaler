@@ -135,7 +135,7 @@ class KubernetesToolbox(object):
                 api_instance = client.CoreV1Api(api_client)
                 api_response = api_instance.read_namespaced_config_map(
                     name=_config_map_name, namespace=_namespace)
-                _logger.trace(f"{api_response}")
+                _logger.debug(f"{api_response}")
 
             if _annotation in api_response.metadata.annotations:
                 return api_response.metadata.annotations[_annotation]
@@ -248,7 +248,7 @@ class KubernetesToolbox(object):
                 # '/apis/apps/v1/namespaces/{namespace}/deployments/{name}'
                 api_response = api_instance.patch_namespaced_custom_object(
                     namespace=_namespace, group=_group, version=_version, name=_custom_object_name, plural=_custom_object_kind_plural, body=_body)
-                _logger.trace(f"Patch custom object {api_response} ")
+                _logger.debug(f"Patch custom object {api_response} ")
                 return api_response
             except ApiException as e:
                 _logger.exception(f"{e}")
@@ -268,7 +268,7 @@ class KubernetesToolbox(object):
             try:
                 api_response = api_instance.get_namespaced_custom_object(
                     namespace=_namespace, group=_group, version=_version, name=_custom_object_name, plural=_custom_object_kind_plural, async_req=False)
-                _logger.trace(f"Patch custom object {api_response} ")
+                _logger.debug(f"Patch custom object {api_response} ")
                 return api_response
             except ApiException as e:
                 _logger.exception(f"{e}")
@@ -304,8 +304,7 @@ class KubernetesToolbox(object):
             except ApiException as e:
                 _logger.exception(f"{e =} {api_response=}")
 
-            _logger.trace(
-                f"find replica_set_name api_response: {api_response}")
+            # _logger.info(f"find replica_set_name api_response: {api_response}")
             _logger.debug(f"find replica_set_name {_rs.metadata.name}")
 
             if _field == "name":
@@ -327,7 +326,7 @@ class KubernetesToolbox(object):
                 if api_response.subsets:
                     _logger.debug(f"found subsets")
                     for subset in api_response.subsets:
-                        # _logger.debug(f"subset: {subset}")
+                        _logger.debug(f"subset: {subset}")
                         if hasattr(subset, 'addresses'):
                             if subset.addresses is not None:
                                 for address in subset.addresses:
@@ -350,5 +349,5 @@ class KubernetesToolbox(object):
 
             api_response = api_instance.list_namespaced_pod(
                 namespace=_namespace, label_selector=_label_selector, timeout_seconds=1)
-            # _logger.debug(f"{api_response =}")
+            _logger.debug(f"{api_response =}")
             return api_response

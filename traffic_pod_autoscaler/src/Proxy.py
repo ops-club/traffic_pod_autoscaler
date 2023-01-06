@@ -21,7 +21,6 @@ class Proxy(object):
     metrics_port: int
     _remote_address: string
     _remote_port: int
-    remote_timeout: int = 30
     _sock_max_handle_buffer: int = 200
     lsock: list = []
     msg_queue: dict = {}
@@ -50,9 +49,6 @@ class Proxy(object):
         if "sock_max_handle_buffer" in args:
             self._sock_max_handle_buffer = args.sock_max_handle_buffer
 
-        if "remote_timeout" in args:
-            self.remote_timeout = args.remote_timeout
-
         if "update_annotation_refresh_interval" in args:
             self._update_annotation_refresh_interval = args.update_annotation_refresh_interval
 
@@ -61,7 +57,6 @@ class Proxy(object):
 
         _logger.info(f"Proxy remote_address: {self._remote_address}")
         _logger.info(f"Proxy remote_port: {self._remote_port}")
-        _logger.info(f"Proxy remote_timeout: {self.remote_timeout}")
 
         if self.metrics_server:
             _logger.info(f"Proxy metrics_port: {self.metrics_port}")
@@ -69,6 +64,7 @@ class Proxy(object):
         # Define n seconds as a timedelta object
         self._update_annotation_refresh_interval_delta = _toolbox.get_date_timedelta_seconds(
             self._update_annotation_refresh_interval)
+        # super(ClassName, self).__init__(*args))
 
     def set_scaler(self, _scaler: Scaler):
         _logger.debug("START")
@@ -79,26 +75,20 @@ class Proxy(object):
         try:
             return self.tcp_server()
         except Exception as e:
-            _logger.exception(f"Exception:Proxy_Run:{e}")
+            _logger.exception(e)
 
     def tcp_server(self):
         _logger.debug("START")
-
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.setblocking(True)
-                sock.bind((self.local_address, int(self.local_port)))
-                sock.listen(self._sock_max_handle_buffer)
+            sock.setblocking(True)
+            sock.bind((self.local_address, int(self.local_port)))
+            sock.listen(self._sock_max_handle_buffer)
+            self.lsock.append(sock)
 
-                self.lsock.append(sock)
-
-                _logger.info(
-                    f'Listening on {self.local_address}:{self.local_port}')
-            except Exception as e:
-                _logger.exception(
-                    f"Exception:Proxy_tcp_server:{e} // Failed to listen on {self.local_address}:{self.local_port}")
+            _logger.info(
+                f'Listening on {self.local_address}:{self.local_port}')
 
             while True:
                 readable, writable, exceptional = select.select(
@@ -106,76 +96,46 @@ class Proxy(object):
                 for s in readable:
                     if s == sock:
                         self.hit_request()  # very important, else target will not be available to connect
-                        try:
-                            rserver = self.remote_conn()
-                        except Exception as e:
-                            _logger.error(
-                                "the connection with the remote server can't be established")
-
+                        rserver = self.remote_conn()
                         if rserver:
-                            try:
+                            client, addr = sock.accept()
+                            self.stats_add_request_infos(addr[0])
+                            _logger.info('Accepted connection from {0}:{1}'.format(
+                                addr[0], addr[1]))
+                            self.store_sock(client, addr, rserver)
+                            break
+                        else:
+                            _logger.error('the connection with the remote server can\'t be \
+                            established')
+                            _logger.info(
+                                'Connection with {} is closed'.format(addr[0]))
+                            client.close()
 
-                                ########################
-                                ########################
-                                ########################
-                                # tmp do debug
-                                # from random import randrange
-                                # number = randrange(10)
-                                # if number % 2 == 0:
-                                #     raise Exception("Sorry, 502")
-                                ########################
-                                ########################
-                                ########################
-
-                                client, addr = sock.accept()
-
-                                self.stats_add_request_infos(addr[0])
-                                _logger.info(
-                                    f"Accepted connection from {addr[0]}:{addr[1]}")
-                                self.store_sock(client, addr, rserver)
-                            except Exception as e:
-                                _logger.info(f"Exception:sock.accept: {e}")
-                        # else:
-                        #     _logger.info(
-                        #         'Connection with {} is closed'.format(addr[0]))
-
-                    try:
-                        data = self.received_from(s)
-                    except Exception as e:
-                        _logger.exception(
-                            f"Exception:Proxy_tcp_server_received_from:{e}")
-
-                    # number = randrange(10)
-                    # if number % 2 == 0:
-                    #     data = ''
-                    #     _logger.info('force data to empty str')
-                    # _logger.trace(f"Exception:data_debug:{data}")
-
+                    data = self.received_from(s, 120)
                     if isinstance(data, str):
-                        data = bytes(data, 'utf-8')
+                        data = data.encode("utf-8") 
 
-                    try:
-                        self.msg_queue[s].setblocking(False)
-                        self.msg_queue[s].send(data)
-                    except Exception as e:
-                        _logger.exception(f"Exception:send_data:{e}")
+                    self.msg_queue[s].setblocking(False)
+                    self.msg_queue[s].send(data)
 
                     if len(data) == 0:
-                        _logger.trace(
-                            f"Exception:Proxy_tcp_server:Received 0 byte from client")
-                        try:
-                            self.close_sock(s)
-                            # client.close()
-                        except Exception as e:
-                            _logger.info(f"Exception:client.close: {e}")
+                        self.close_sock(s)
+                        break
                     else:
-                        _logger.trace(
-                            f'Received {len(data)} bytes from client ')
-
+                        _logger.debug(
+                            'Received {} bytes from client '.format(len(data)))
+                        # here if we want to update reponse
         except KeyboardInterrupt:
             _logger.info('Ending server')
         except Exception as e:
-            _logger.exception(f"Exception:Proxy_tcp_server:{e}")
+            _logger.debug(
+                f"Failed to listen on {self.local_address}:{self.local_port}")
+            _logger.exception(f"Exception::{e}")
+            # sys.exit(1)
+            # return 1
+        # finally:
+            # sys.exit(0)
+            # return 1
 
     def remote_conn(self):
         _logger.debug("START")
@@ -184,20 +144,15 @@ class Proxy(object):
         while (counter < max_attempts):
             try:
                 remote_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                remote_sock.settimeout(int(self.remote_timeout))
                 remote_sock.connect(
                     (self._remote_address, int(self._remote_port)))
-
                 return remote_sock
             except Exception as e:
                 counter += 1
                 _logger.debug(
                     f"Sleep 1s due to connect failure ({counter}/{max_attempts}): {e}")
                 time.sleep(1)
-
-        _exception_msg = f"Exception:Proxy_remote_conn: Max connect attempts reached ({max_attempts})."
-        _logger.exception(_exception_msg)
-
+        _logger.exception(f"Max connect attempts reached ({max_attempts}).")
         return False
 
     def store_sock(self, client, addr, rserver):
@@ -211,24 +166,21 @@ class Proxy(object):
         except Exception as e:
             _logger.exception(e)
 
-    def received_from(self, sock: socket.socket):
+    def received_from(self, sock, timeout):
         _logger.debug("START")
-
         BUFF_SIZE = 4096
-        _data = b""
-
-        sock.settimeout(int(self.remote_timeout))
-
+        data = ''
+        sock.settimeout(timeout)
         try:
             while True:
                 data = sock.recv(BUFF_SIZE)
-                _data += data
-                if not data or len(data) < BUFF_SIZE:
+                if not data:
                     break
-        except Exception as e:
-            _logger.exception(f"Exception:Proxy_received_from:{e}")
+                data = + data
 
-        return _data
+        except:
+            pass
+        return data
 
     def close_sock(self, sock):
         _logger.debug('End of connection with {}'.format(sock.getpeername()))
