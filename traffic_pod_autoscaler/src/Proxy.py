@@ -221,7 +221,7 @@ class Proxy(object):
         BUFF_SIZE = 4096
         _data = b""
 
-        sock.setblocking(True)
+        sock.setblocking(False)
         # sock.settimeout(int(self._remote_timeout))
         if _reconnect:
             # Re-establish the connection and try again
@@ -235,10 +235,11 @@ class Proxy(object):
             while True:
                 try:
                     if self.sock_is_open(sock):
-                        data = sock.recv(BUFF_SIZE)
-                        _data += data
-                        if not data or len(data) < BUFF_SIZE:
+                        chunk = sock.recv(BUFF_SIZE)
+
+                        if not chunk:
                             break
+                        _data += chunk
                     else:
                         break
 
