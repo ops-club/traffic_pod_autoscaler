@@ -195,9 +195,10 @@ class Proxy(object):
 
     def send_data(self, sock: socket.socket, _data):
         try:
+            _logger.debug(f"data len to send: {len(_data)}")
             if self.sock_is_open(sock):
                 # Send data over the socket
-                sock.setblocking(False)
+                sock.setblocking(True)
                 sock.sendall(_data)
 
         except socket.error as err:
@@ -262,7 +263,7 @@ class Proxy(object):
 
         except Exception as e:
             _logger.exception(f"Exception:Proxy_received_from:{e}")
-
+        _logger.debug(f"data len receiv: {len(_data)}")
         return _data
 
     def close_sock(self, sock):
