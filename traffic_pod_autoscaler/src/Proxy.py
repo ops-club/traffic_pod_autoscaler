@@ -198,7 +198,7 @@ class Proxy(object):
             if self.sock_is_open(sock):
                 # Send data over the socket
                 sock.setblocking(False)
-                sock.send(_data)
+                sock.sendall(_data)
 
         except socket.error as err:
             # Handle the Errno 107 error
@@ -210,7 +210,7 @@ class Proxy(object):
                 _logger.debug(
                     f"Try to connect to the server:{_addr}")
                 sock.connect(_addr)
-                sock.send(_data)
+                sock.sendall(_data)
             else:
                 # Handle other errors
                 _logger.debug("An error occurred:", err)
