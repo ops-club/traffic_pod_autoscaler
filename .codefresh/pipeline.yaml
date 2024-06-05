@@ -8,9 +8,9 @@ steps:
   clone:
     stage: init
     type: git-clone
-    repo: OpenClassrooms/traffic_pod_autoscaler
-    revision: main
     git: oc-infra-bot
+    repo: ${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}
+    revision: ${{CF_BRANCH}}
 
   build:
     stage: docker
