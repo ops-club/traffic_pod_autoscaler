@@ -1,0 +1,32 @@
+version: 1.0
+
+stages:
+- init
+- docker
+
+steps:
+  clone:
+    stage: init
+    type: git-clone
+    git: oc-infra-bot
+    repo: ${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}
+    revision: ${{CF_BRANCH}}
+
+  build:
+    stage: docker
+    type: build
+    image_name: oc/traffic_pod_autoscaler
+    working_directory: ${{clone}}/traffic_pod_autoscaler
+    dockerfile: Dockerfile
+    tag: latest
+    no_cache: true
+    no_cf_cache: true
+
+  push:
+    stage: docker
+    type: push
+    arguments:
+      candidate: ${{build}}
+      tag: latest
+      image_name: oc/traffic_pod_autoscaler
+      registry: ecr_tools_internal
